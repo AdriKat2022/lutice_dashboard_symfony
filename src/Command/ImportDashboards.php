@@ -98,17 +98,21 @@ class ImportDashboards extends Command
 					'event' => $event_id,
 					'eleve' => $user_info['extId']
 				]);
+
 			if (!$cours)
 			{
 				// Create a new one only if it doesn't exist already
 				dump("No course found for event '". $event_id ."' and student '". $user_info['extId']  ."'.\nCreating one...");
 				$cours = new Cours();
 			}
+
+			// Unecessary details
 // 			$cours->setEleve(getInternalBBBId($user_info['extId'])); // Weird looking, to review
 // 			$cours->setStartTime($user_info['registeredOn']);
 // 			$cours->setEndTime($user_info['leftOn']);
 // 			$cours->setActiveTime($user_info['talk']['totalTime']);
 
+			// Update the fields
 //			$cours->setAnswers($user_info['answers']);
 			$cours->setTalkTime($user_info['talk']);
 			$cours->setEmojisCount($user_info['emojis']);
