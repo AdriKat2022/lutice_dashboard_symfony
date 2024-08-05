@@ -71,8 +71,8 @@ class ImportDashboards extends Command
         // - (extId -> recordId)
         // - (name -> meetingName)
         // - (polls -> ???) (do nothing for now)
-        // - (screenshares -> ???) [store TIME ONLY in JSON] 
-        // - (presentationSlides -> ???) [store in JSON] 
+        // - (screenshares -> ???) [store TIME ONLY] 
+        // - (presentationSlides -> ???) [JSON] 
         // - (createdOn -> starttime) DONE
         // - (endedOn -> endtime) DONE
         $meeting->setStartTime((new \DateTime())->setTimestamp((int)($dashboard['createdOn']/1000)));
@@ -108,16 +108,19 @@ class ImportDashboards extends Command
 				$cours = new Cours();
 			}
 
-			// Unecessary details
-// 			$cours->setEleve(getInternalBBBId($user_info['extId'])); // Weird looking, to review
+			$user_activity = getUserActivity($user_info);
+			$cours->setOnlineTime($user_activity['onlineTime']);
+			$cours->setConnectionCount($user_activity['connectionCount']);
+
+			// Unecessary details (but mandatory for debug)
+			$cours->setEleve(getInternalBBBId($user_info['extId']));
 // 			$cours->setStartTime($user_info['registeredOn']);
 // 			$cours->setEndTime($user_info['leftOn']);
-// 			$cours->setActiveTime($user_info['talk']['totalTime']);
 
 			// Update the fields
 //			$cours->setAnswers($user_info['answers']);
-			$cours->setTalkTime($user_info['talk']);
-			$cours->setEmojisCount($user_info['emojis']);
+			$cours->setTalkTime($user_info['talk']['totalTime']);
+			$cours->setEmojis($user_info['emojis']);
 			$cours->setMessageCount($user_info['totalOfMessages']);
 
 			$this->entityManager->persist($cours);
@@ -127,7 +130,7 @@ class ImportDashboards extends Command
 	}
 
 
-    private function computeConnectionsOfUser($user_info) : array
+    protected function getUserActivity($user_info) : array
     {
 		$connection_count = 0;
 		$total_online_time = 0;
@@ -141,7 +144,7 @@ class ImportDashboards extends Command
     }
 
 
-	private function getInternalBBBId(string $externalId) : int
+	protected function getInternalBBBId(string $externalId) : int
 	{
         $data = explode('_',$externalId);
         $id = base64_decode($data[0]);

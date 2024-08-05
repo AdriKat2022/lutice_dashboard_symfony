@@ -96,6 +96,9 @@ class Cours {
 
     #[ORM\Column(nullable: true)]
     private ?int $messageCount = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $connectionCount = null;
     
     public function __construct() {
         //$this->eleve = new \Doctrine\Common\Collections\ArrayCollection();
@@ -393,6 +396,18 @@ class Cours {
     public function setWebcamTime(?int $webcamTime): static
     {
         $this->webcamTime = $webcamTime;
+
+        return $this;
+    }
+
+    public function getConnectionCount(): ?int
+    {
+        return $this->connectionCount;
+    }
+
+    public function setConnectionCount(?int $connectionCount): static
+    {
+        $this->connectionCount = $connectionCount;
 
         return $this;
     }
