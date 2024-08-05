@@ -10,6 +10,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Cours;
 use App\Entity\Meeting;
 use App\Entity\Eleve;
+use App\Entity\Event;
+
+
 
 class ImportDashboards extends Command
 {
@@ -42,8 +45,8 @@ class ImportDashboards extends Command
 
         // Import each dashboard
         foreach ($dashboardFiles as $dashboardFile) {
-            $output->writeln('Importing ' . $dashboardFile . "...");
-            $this->importDashboard($dashboardFile);
+            $output->writeln("\n-------------------------\nImporting " . $dashboardFile . "...");
+            $this->importDashboard($dashboardFile, $output);
         }
 
         $output->writeln('Dashboards imported successfully!');
@@ -51,102 +54,103 @@ class ImportDashboards extends Command
         return Command::SUCCESS;
     }
 
-    protected function importDashboard($dashboard_path) : void
+    protected function importDashboard($dashboard_path, $output) : void
     {
         // Serialze the JSON file into an nested array
         $dashboard = json_decode(file_get_contents($dashboard_path), true);
-	    dump(print_r($dashboard));
+	    // $output->writeln(print_r($dashboard));
 
         // Get the meeting entity from the database
         $meeting = $this->entityManager->getRepository('App\Entity\Meeting')->findOneBy(['meetingId' => $dashboard['extId']]);
 
         if (!$meeting){
-            dump("Failed to retrieve meeting. Skipping.");
-            return;
+            $output->writeln("Failed to retrieve meeting '". $dashboard['extId'] ."'...");
+			return;
         }	
+		$output->writeln("Found meeting '". $meeting->getMeetingId() ."'. Importing...");
+		$meeting->setMeetingName($dashboard['name']);
 
-        $event_id = $meeting->getEvent()->getId();
-
-        // Import the JSON dashboards
-        // - (intId -> meetingId)
-        // - (extId -> recordId)
-        // - (name -> meetingName)
-        // - (polls -> ???) (do nothing for now)
-        // - (screenshares -> ???) [store TIME ONLY] 
-        // - (presentationSlides -> ???) [JSON] 
-        // - (createdOn -> starttime) DONE
-        // - (endedOn -> endtime) DONE
+		$event = $meeting->getEvent();
+  
+		// Import the JSON dashboards
         $meeting->setStartTime((new \DateTime())->setTimestamp((int)($dashboard['createdOn']/1000)));
         $meeting->setEndTime((new \DateTime())->setTimestamp((int)($dashboard['endedOn']/1000)));
         $this->entityManager->persist($meeting);
 
-        // For each user in the meeting (dashboard)
-        // Info about the course (for each student)
-		// - (event [DEDUCED from MEETING])
-        // - (extId -> eleve)
-        // - (name + eventName -> cours name ?)
-        // - (intIds -> onlineTime [DEDUCED])
-		// - (isModerator -> isTeacher ?) [Do nothing for now]
-		// - (answers -> ?) [Do nothing for now]
-        // - (talk -> talkTime)
-        // - (emojis -> emojis) [en JSON]
-		// - (webcams -> webcamTime) [count]
-        // - (totalOfMessages -> messageCount)
+		$output->writeln("Saved '". $meeting->getMeetingId() ."'.\n***********\nImporting courses...");
 
         foreach ($dashboard['users'] as $key => $user_info)
 		{
+			// Find or define the ELEVE
+			$eleve_id = $this->getInternalBBBId($user_info['extId']);
+			$output->writeln("***\nFinding student '". $eleve_id ."'...");
+			$eleve = $this->entityManager->getRepository('App\Entity\Eleve')->findOneBy(
+				[
+					'id' => $eleve_id
+				]);
 
+			if (!$eleve)
+			{
+				$eleve = new Eleve();
+				$eleve->setId($eleve_id);
+				$this->entityManager->persist($eleve);
+				$this->entityManager->flush();
+				$output->writeln("No student found for '". $eleve_id ."'. Created temporary student (id = ". $eleve->getId() .")");
+			}
+			$fullname = explode(" ", $user_info['name']);
+			$eleve->setFirstName($fullname[0]);
+			if (array_key_exists(1, $fullname)) {
+				$eleve->setLastName($fullname[1]);
+			}
+			$this->entityManager->persist($eleve);
+			$this->entityManager->flush();
+
+
+			// Find or define the COURS
 			$cours = $this->entityManager->getRepository('App\Entity\Cours')->findOneBy(
 				[
-					'event' => $event_id,
-					'eleve' => $user_info['extId']
+					'event' => $event,
+					'eleve' => $eleve
 				]);
 
 			if (!$cours)
 			{
 				// Create a new one only if it doesn't exist already
-				dump("No course found for event '". $event_id ."' and student '". $user_info['extId']  ."'.\nCreating one...");
+				$output->writeln("No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'. Creating one...");
 				$cours = new Cours();
-			}
-
-
-			// Unecessary details (but mandatory for debug)
-			$eleve = $this->entityManager->getRepository('App\Entity\Eleve')->findOneBy(
-				[
-					'id' => $this->getInternalBBBId($user_info['extId'])
-				]);
-			if (!$eleve)
-			{
-				$eleve = new Eleve();
-				$eleve->setId($this->getInternalBBBId($user_info['extId']));
+				$cours->setEvent($event);
+				$cours->setEleve($eleve);
 			}
 			$cours->setEleve($eleve);
+			$this->entityManager->persist($cours);
+			$this->entityManager->flush();
 
 			// Update the fields
-//			$cours->setAnswers($user_info['answers']);
+			// TODO : Get Answers
 			$cours->setTalkTime($user_info['talk']['totalTime']);
 			$cours->setEmojis($user_info['emojis']);
 			$cours->setMessageCount($user_info['totalOfMessages']);
-			$user_activity = $this->getUserActivity($user_info);
-			$cours->setStartTime($user_activity['firstConnected']);
-			$cours->setEndTime($user_activity['lastLeft']);
-			$cours->setOnlineTime($user_activity['totalOnlineTime']);
-			$cours->setConnectionCount($user_activity['connectionCount']);
 			$cours->setWebcamTime($this->getWebcamTime($user_info)['totalTime']);
 
-			print_r($cours);
-			$this->entityManager->persist($cours);
-			$this->entityManager->persist($eleve);
-		}
+			$user_activity = $this->getUserActivity($user_info);
+			$cours->setStartTime((new \DateTime())->setTimestamp((int)$user_activity['firstConnected']/1000));
+			$cours->setEndTime((new \DateTime())->setTimestamp((int)$user_activity['lastLeft']/1000));
+			$cours->setOnlineTime($user_activity['totalOnlineTime']);
+			$cours->setConnectionCount($user_activity['connectionCount']);
 
+			$this->entityManager->persist($cours);
+			$this->entityManager->flush();
+			$output->writeln("Saved the course (id = ". $cours->getId() .") '". $cours ."'...");
+		}
 
 		$this->entityManager->persist($meeting);
 		$this->entityManager->flush();
+		$output->writeln("**********\nSaved the meeting (id = ". $meeting->getId() .") '". $meeting->getMeetingId() ."'");
 
-		dump("Successfully imported '". $dashboard_path ."'");
+		$output->writeln("Successfully imported '". $dashboard_path ."'");
 	}
 
-	// Returns the  and the connectionCount from the intIds array
+	// Returns the total time spent on webcams from the webcams array
     private function getWebcamTime($user_info) : array
     {
 		$total_webcam_time = 0;
@@ -161,7 +165,7 @@ class ImportDashboards extends Command
 	// Returns the totalOnlineTime and the connectionCount from the intIds array
     private function getUserActivity($user_info) : array
     {
-		$first_connected = 0;
+		$first_connected = -1;
 		$last_left = -1;
 
 		$connection_count = 0;
@@ -169,7 +173,7 @@ class ImportDashboards extends Command
 
 		foreach ($user_info['intIds'] as $connection)
 		{
-			if ($connection['registeredOn'] < $first_connected)
+			if ($connection['registeredOn'] < $first_connected || $first_connected < 0)
 			{
 				$first_connected = $connection['registeredOn'];
 			}
@@ -192,9 +196,9 @@ class ImportDashboards extends Command
 
 	private function getInternalBBBId(string $externalId) : int
 	{
-        $data = explode('_',$externalId);
+        $data = explode('_', $externalId);
         $id = base64_decode($data[0]);
-        if($data[1] === hash('adler32',$id)) {
+        if($data[1] === hash('adler32', $id)) {
             return $id;
         }
         

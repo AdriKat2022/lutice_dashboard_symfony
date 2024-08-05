@@ -85,6 +85,10 @@ class Cours {
     #[ORM\Column(nullable: true)]
     private ?int $externalId = null;
 
+
+    #[ORM\Column(nullable: true)]
+    private ?int $onlineTime = null;
+
     #[ORM\Column(nullable: true)]
     private ?int $talkTime = null;
 
@@ -107,7 +111,8 @@ class Cours {
     }
     
     public function __toString() {
-        return (string) $this->getCourseUrl();
+//         return (string) $this->getCourseUrl();
+		return (string) $this->getEvent() . " for student " . (string) $this->getEleve();
     }
     
     public function __get($propertyName)
@@ -119,7 +124,6 @@ class Cours {
     {
         return isset($this->$propertyName);
     }
-    
 
     public function getId() {
         return $this->id;
