@@ -9,6 +9,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 use App\Entity\Cours;
 use App\Entity\Meeting;
+use App\Entity\Eleve;
 
 class ImportDashboards extends Command
 {
@@ -108,43 +109,88 @@ class ImportDashboards extends Command
 				$cours = new Cours();
 			}
 
-			$user_activity = getUserActivity($user_info);
-			$cours->setOnlineTime($user_activity['onlineTime']);
-			$cours->setConnectionCount($user_activity['connectionCount']);
 
 			// Unecessary details (but mandatory for debug)
-			$cours->setEleve(getInternalBBBId($user_info['extId']));
-// 			$cours->setStartTime($user_info['registeredOn']);
-// 			$cours->setEndTime($user_info['leftOn']);
+			$eleve = $this->entityManager->getRepository('App\Entity\Eleve')->findOneBy(
+				[
+					'id' => $this->getInternalBBBId($user_info['extId'])
+				]);
+			if (!$eleve)
+			{
+				$eleve = new Eleve();
+				$eleve->setId($this->getInternalBBBId($user_info['extId']));
+			}
+			$cours->setEleve($eleve);
 
 			// Update the fields
 //			$cours->setAnswers($user_info['answers']);
 			$cours->setTalkTime($user_info['talk']['totalTime']);
 			$cours->setEmojis($user_info['emojis']);
 			$cours->setMessageCount($user_info['totalOfMessages']);
+			$user_activity = $this->getUserActivity($user_info);
+			$cours->setStartTime($user_activity['firstConnected']);
+			$cours->setEndTime($user_activity['lastLeft']);
+			$cours->setOnlineTime($user_activity['totalOnlineTime']);
+			$cours->setConnectionCount($user_activity['connectionCount']);
+			$cours->setWebcamTime($this->getWebcamTime($user_info)['totalTime']);
 
+			print_r($cours);
 			$this->entityManager->persist($cours);
+			$this->entityManager->persist($eleve);
 		}
 
+
+		$this->entityManager->persist($meeting);
 		$this->entityManager->flush();
+
+		dump("Successfully imported '". $dashboard_path ."'");
 	}
 
-
-    protected function getUserActivity($user_info) : array
+	// Returns the  and the connectionCount from the intIds array
+    private function getWebcamTime($user_info) : array
     {
+		$total_webcam_time = 0;
+		foreach ($user_info['webcams'] as $webcam)
+		{
+			$total_webcam_time += $webcam['stoppedOn'] - $webcam['startedOn'];
+		}
+
+		return [ 'totalTime' => $total_webcam_time ] ;
+    }
+
+	// Returns the totalOnlineTime and the connectionCount from the intIds array
+    private function getUserActivity($user_info) : array
+    {
+		$first_connected = 0;
+		$last_left = -1;
+
 		$connection_count = 0;
 		$total_online_time = 0;
+
 		foreach ($user_info['intIds'] as $connection)
 		{
+			if ($connection['registeredOn'] < $first_connected)
+			{
+				$first_connected = $connection['registeredOn'];
+			}
+			if ($connection['leftOn'] > $last_left || $last_left < 0 )
+			{
+				$last_left = $connection['leftOn'];
+			}
 			$total_online_time += $connection['leftOn'] - $connection['registeredOn'];
 			$connection_count ++;
 		}
 
-		return [ 'totalTime' => $total_online_time, 'connectionCount' => $connection_count ] ;
+		return [
+			'totalOnlineTime' => $total_online_time,
+			'connectionCount' => $connection_count,
+			'firstConnected' => $first_connected,
+			'lastLeft' => $last_left,
+		];
     }
 
 
-	protected function getInternalBBBId(string $externalId) : int
+	private function getInternalBBBId(string $externalId) : int
 	{
         $data = explode('_',$externalId);
         $id = base64_decode($data[0]);

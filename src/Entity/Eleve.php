@@ -164,6 +164,16 @@ class Eleve
         return (string) $this->firstName.' '.$this->lastName;
     }
     /**
+     * Set id
+     *
+     * @return integer
+     */
+    public function setId(int $id)
+    {
+        $this->id = $id;
+    }
+
+    /**
      * Get id
      *
      * @return integer
