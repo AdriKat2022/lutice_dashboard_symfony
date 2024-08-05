@@ -55,6 +55,7 @@ class ImportDashboards extends Command
         // Serialze the JSON file into an nested array
         $dashboard = json_decode(file_get_contents($dashboard_path), true);
 	    dump(print_r($dashboard));
+
         // Get the meeting entity from the database
         $meeting = $this->entityManager->getRepository('App\Entity\Meeting')->findOneBy(['meetingId' => $dashboard['extId']]);
 
@@ -69,9 +70,9 @@ class ImportDashboards extends Command
         // - (intId -> meetingId)
         // - (extId -> recordId)
         // - (name -> meetingName)
-        // - (polls -> ???)
-        // - (screenshares -> ???)
-        // - (presentationSlides -> ???)
+        // - (polls -> ???) (do nothing for now)
+        // - (screenshares -> ???) [store TIME ONLY in JSON] 
+        // - (presentationSlides -> ???) [store in JSON] 
         // - (createdOn -> starttime) DONE
         // - (endedOn -> endtime) DONE
         $meeting->setStartTime((new \DateTime())->setTimestamp((int)($dashboard['createdOn']/1000)));
@@ -84,10 +85,11 @@ class ImportDashboards extends Command
         // - (extId -> eleve)
         // - (intIds -> onlineTime [DEDUCED])
         // - (name + eventName -> cours name ?)
-		// - (isModerator -> isTeacher ?)
-		// - (answers -> ?)
+		// - (isModerator -> isTeacher ?) [Do nothing for now]
+		// - (answers -> ?) [Do nothing for now]
         // - (talk -> talkTime)
-        // - (emojis -> emojisCount)
+        // - (emojis -> emojis) [en JSON]
+		// - (webcams -> webcamTime) [count]
         // - (totalOfMessages -> messageCount)
 
         foreach ($dashboard['users'] as $key => $user_info)
@@ -132,7 +134,7 @@ class ImportDashboards extends Command
 		foreach ($user_info['intIds'] as $connection)
 		{
 			$total_online_time += $connection['leftOn'] - $connection['registeredOn'];
-			$connection_count += 1;
+			$connection_count ++;
 		}
 
 		return [ 'totalTime' => $total_online_time, 'connectionCount' => $connection_count ] ;
