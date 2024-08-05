@@ -83,8 +83,8 @@ class ImportDashboards extends Command
         // Info about the course (for each student)
 		// - (event [DEDUCED from MEETING])
         // - (extId -> eleve)
-        // - (intIds -> onlineTime [DEDUCED])
         // - (name + eventName -> cours name ?)
+        // - (intIds -> onlineTime [DEDUCED])
 		// - (isModerator -> isTeacher ?) [Do nothing for now]
 		// - (answers -> ?) [Do nothing for now]
         // - (talk -> talkTime)
