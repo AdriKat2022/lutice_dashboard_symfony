@@ -51,25 +51,49 @@ class ImportDashboards extends Command
 			$io->warning("Aborted by user.");
 			return Command::FAILURE;
 		}
+
+		$failures = [];
+
 // 		$io->progressStart(count($dashboardFiles));
         // Import each dashboard
         foreach ($dashboardFiles as $dashboardFile) {
             $io->section("Importing dashboard " . $dashboardFile . "...");
-            $this->importDashboard($dashboardFile, $io);
+            if (!$this->importDashboard($dashboardFile, $io)){
+				$failures[] = $dashboardFile;
+			}
 // 			$io->progressAdvance();
         }
 
 // 		$io->progressFinish();
-        $io->success('Dashboards imported successfully!');
+		if (count($failures) > 0){
+			$text_failures = "";
+			foreach ($failures as $failure)
+			{
+				$text_failures .= basename($failure) . "\n";
+			}
+			$io->error([
+				"Failed to import ". count($failures) ." out of ". count($dashboardFiles) ." dashboards.",
+				"Failed dashboards are :",
+				$text_failures
+			]);
+			return Command::FAILURE;
+		}
 
+		if (count($dashboardFiles) == 0)
+		{
+			$io->info("No dashboards found in directory '". $dashboard_path ."'");
+			return Command::SUCCESS;
+		}
+        $io->success('Successfully imported '. count($dashboardFiles) .' Dashboards to the existing database.');
         return Command::SUCCESS;
     }
 
-    protected function importDashboard($dashboard_path, $io) : void
+    protected function importDashboard($dashboard_path, $io) : bool 
     {
 		$io->text("Serializing '". $dashboard_path ."'...");
         // Serialze the JSON file into an nested array
         $dashboard = json_decode(file_get_contents($dashboard_path), true);
+		$io->newLine();
 
 		$io->text("Fetching '". $dashboard['name'] . "' (" .$dashboard['extId']. ") from the database...");
         // Get the meeting entity from the database
@@ -77,7 +101,7 @@ class ImportDashboards extends Command
 
         if (!$meeting){
             $io->error("Failed to retrieve meeting '". $dashboard['extId'] ."'...");
-			return;
+			return false;
         }	
 		$io->text("Found meeting (id = ". $meeting->getId() .") '". $meeting->getMeetingId() ."'.");
 
@@ -85,10 +109,11 @@ class ImportDashboards extends Command
 		if (!$event)
 		{
 			$io->error([
-				"No event found for meeting '". $meeting->getMeetingId() ."'.",
+				"No event found for meeting (id = ". $meeting->getId() .")",
+				"Meeting_id = ". $meeting->getMeetingId() ."",
 				"Please create an event for this meeting before importing the dashboard."
 			]);
-			return;
+			return false;
 		}
 
 		$io->section("Importing infos...");
@@ -172,6 +197,8 @@ class ImportDashboards extends Command
 
 		$io->newLine();
 		$io->note("Successfully imported '". $dashboard_path ."'!");
+
+		return true;
 	}
 
 	// Returns the total time spent on webcams from the webcams array
