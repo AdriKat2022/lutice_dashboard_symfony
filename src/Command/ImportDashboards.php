@@ -44,7 +44,7 @@ class ImportDashboards extends Command
         // Find all the JSON files in the directory
 		$io->section('Looking for JSON files...');
         $dashboardFiles = glob($dashboard_path . '/*.json');
-        $io->text('Found ' . count($dashboardFiles) . ' dashboards to import in directory "' . $dashboard_path . '".');
+        $io->info('Found ' . count($dashboardFiles) . ' dashboards to import in directory "' . $dashboard_path . '".');
 		$result = $io->confirm("Do you want to import these dashboards?", true);
 		if (!$result)
 		{
