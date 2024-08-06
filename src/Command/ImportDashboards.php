@@ -5,6 +5,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Doctrine\ORM\EntityManagerInterface;
 
 use App\Entity\Cours;
@@ -35,55 +36,79 @@ class ImportDashboards extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+		$io = new SymfonyStyle($input, $output);
         $dashboard_path = $input->getArgument('DashboardsDirectory');
 
-        $output->writeln('Importing dashboards...');
+        $io->title('Importing dashboards from directory "' . $dashboard_path . '"');
 
         // Find all the JSON files in the directory
+		$io->section('Looking for JSON files...');
         $dashboardFiles = glob($dashboard_path . '/*.json');
-        $output->writeln('Found ' . count($dashboardFiles) . ' dashboards to import');
-
+        $io->text('Found ' . count($dashboardFiles) . ' dashboards to import in directory "' . $dashboard_path . '".');
+		$result = $io->confirm("Do you want to import these dashboards?", true);
+		if (!$result)
+		{
+			$io->warning("Aborted by user.");
+			return Command::FAILURE;
+		}
+// 		$io->progressStart(count($dashboardFiles));
         // Import each dashboard
         foreach ($dashboardFiles as $dashboardFile) {
-            $output->writeln("\n-------------------------\nImporting " . $dashboardFile . "...");
-            $this->importDashboard($dashboardFile, $output);
+            $io->section("Importing dashboard " . $dashboardFile . "...");
+            $this->importDashboard($dashboardFile, $io);
+// 			$io->progressAdvance();
         }
 
-        $output->writeln('Dashboards imported successfully!');
+// 		$io->progressFinish();
+        $io->success('Dashboards imported successfully!');
 
         return Command::SUCCESS;
     }
 
-    protected function importDashboard($dashboard_path, $output) : void
+    protected function importDashboard($dashboard_path, $io) : void
     {
+		$io->text("Serializing '". $dashboard_path ."'...");
         // Serialze the JSON file into an nested array
         $dashboard = json_decode(file_get_contents($dashboard_path), true);
-	    // $output->writeln(print_r($dashboard));
 
+		$io->text("Fetching '". $dashboard['name'] . "' (" .$dashboard['extId']. ") from the database...");
         // Get the meeting entity from the database
         $meeting = $this->entityManager->getRepository('App\Entity\Meeting')->findOneBy(['meetingId' => $dashboard['extId']]);
 
         if (!$meeting){
-            $output->writeln("Failed to retrieve meeting '". $dashboard['extId'] ."'...");
+            $io->error("Failed to retrieve meeting '". $dashboard['extId'] ."'...");
 			return;
         }	
-		$output->writeln("Found meeting '". $meeting->getMeetingId() ."'. Importing...");
-		$meeting->setMeetingName($dashboard['name']);
+		$io->text("Found meeting (id = ". $meeting->getId() .") '". $meeting->getMeetingId() ."'.");
 
 		$event = $meeting->getEvent();
-  
-		// Import the JSON dashboards
+		if (!$event)
+		{
+			$io->error([
+				"No event found for meeting '". $meeting->getMeetingId() ."'.",
+				"Please create an event for this meeting before importing the dashboard."
+			]);
+			return;
+		}
+
+		$io->section("Importing infos...");
+
+		$meeting->setMeetingName($dashboard['name']);
         $meeting->setStartTime((new \DateTime())->setTimestamp((int)($dashboard['createdOn']/1000)));
         $meeting->setEndTime((new \DateTime())->setTimestamp((int)($dashboard['endedOn']/1000)));
-        $this->entityManager->persist($meeting);
 
-		$output->writeln("Saved '". $meeting->getMeetingId() ."'.\n***********\nImporting courses...");
+        $this->entityManager->persist($meeting);
+        $this->entityManager->flush();
+
+		$io->text("Saved meeting '". $meeting->getMeetingId() ."'.");
+		$io->section("Importing courses...");
 
         foreach ($dashboard['users'] as $key => $user_info)
 		{
+			$io->section("'". $user_info['name'] ."'");
 			// Find or define the ELEVE
 			$eleve_id = $this->getInternalBBBId($user_info['extId']);
-			$output->writeln("***\nFinding student '". $eleve_id ."'...");
+			$io->text("Finding student of ID: ". $eleve_id ."...");
 			$eleve = $this->entityManager->getRepository('App\Entity\Eleve')->findOneBy(
 				[
 					'id' => $eleve_id
@@ -92,20 +117,22 @@ class ImportDashboards extends Command
 			if (!$eleve)
 			{
 				$eleve = new Eleve();
-				$eleve->setId($eleve_id);
+				$eleve->setId($eleve_id); // Useless, the id is auto-generated and cannot be changed
+				$fullname = explode(" ", $user_info['name']);
+				$eleve->setFirstName($fullname[0]);
+				if (array_key_exists(1, $fullname)) {
+					$eleve->setLastName($fullname[1]);
+				}
 				$this->entityManager->persist($eleve);
 				$this->entityManager->flush();
-				$output->writeln("No student found for '". $eleve_id ."'. Created temporary student (id = ". $eleve->getId() .")");
+				$io->warning([
+					"No student found for '". $eleve_id ."'.",
+					"Created temporary student (id = ". $eleve->getId() .")",
+					"If you wish to save it, change this student's id from ". $eleve->getId() ." to ". $eleve_id ." in the database."
+				]);
 			}
-			$fullname = explode(" ", $user_info['name']);
-			$eleve->setFirstName($fullname[0]);
-			if (array_key_exists(1, $fullname)) {
-				$eleve->setLastName($fullname[1]);
-			}
-			$this->entityManager->persist($eleve);
-			$this->entityManager->flush();
 
-
+			$io->text("Finding course for event '". $event->getId() ."' and student '". $eleve->getId() ."'...");
 			// Find or define the COURS
 			$cours = $this->entityManager->getRepository('App\Entity\Cours')->findOneBy(
 				[
@@ -116,14 +143,13 @@ class ImportDashboards extends Command
 			if (!$cours)
 			{
 				// Create a new one only if it doesn't exist already
-				$output->writeln("No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'. Creating one...");
+				$io->caution("No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'. Creating one...");
 				$cours = new Cours();
 				$cours->setEvent($event);
 				$cours->setEleve($eleve);
+				$this->entityManager->persist($cours);
+				$this->entityManager->flush();
 			}
-			$cours->setEleve($eleve);
-			$this->entityManager->persist($cours);
-			$this->entityManager->flush();
 
 			// Update the fields
 			// TODO : Get Answers
@@ -140,14 +166,12 @@ class ImportDashboards extends Command
 
 			$this->entityManager->persist($cours);
 			$this->entityManager->flush();
-			$output->writeln("Saved the course (id = ". $cours->getId() .") '". $cours ."'...");
+			$io->newLine();
+			$io->text("Saved course (id = ". $cours->getId() .") '". $cours ."'");
 		}
 
-		$this->entityManager->persist($meeting);
-		$this->entityManager->flush();
-		$output->writeln("**********\nSaved the meeting (id = ". $meeting->getId() .") '". $meeting->getMeetingId() ."'");
-
-		$output->writeln("Successfully imported '". $dashboard_path ."'");
+		$io->newLine();
+		$io->note("Successfully imported '". $dashboard_path ."'!");
 	}
 
 	// Returns the total time spent on webcams from the webcams array
