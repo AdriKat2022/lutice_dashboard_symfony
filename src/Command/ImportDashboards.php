@@ -7,113 +7,159 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\EnvVarProcessorInterface;
 
 use App\Entity\Cours;
 use App\Entity\Meeting;
 use App\Entity\Eleve;
 use App\Entity\Event;
+use Doctrine\Migrations\Tools\Console\Command\StatusCommand;
+use Symfony\Component\String\CodePointString;
 
+enum DashCodeStatus : string {
+	case OK = "OK";
+	case DashboardNotFound = "Dashboard Not Found";
+	case MultipleDashboards = "Multiple Dashboards";
+	case UnmatchedMeetingId = "Meeting And Dashboard Ids Unmatched";
+	case NoBindedEventToMeeting = "No Binded Event To Meeting";
+	case Unknown = "Unknown Error";
 
+	public function getReturnCodeMessage(){
+
+		return match($this){
+			DashCodeStatus::OK => "",
+			DashCodeStatus::DashboardNotFound => "No dashboard could be found for the following meeting(s)",
+			DashCodeStatus::MultipleDashboards => "Multiple dashboard have been found for the following meeting(s)",
+			DashCodeStatus::UnmatchedMeetingId => "The meeting_id in the existing database does not match the extId in the dashboard for the following meeting(s)",
+			DashCodeStatus::NoBindedEventToMeeting => "There are no binded event for the following meeting(s)",
+			DashCodeStatus::Unknown => ""
+		};
+	}
+}
 
 class ImportDashboards extends Command
 {
+	static $DASHBOARD_DIR="/var/dashboard/";
+
     private $entityManager;
+	private $defaultDashboardDir;
     
-    // the name of the command (the part after "bin/console")
     protected static $defaultName = 'app:import-dashboards';
     protected static $defaultDescription = 'Import the BBB JSON dashboards into the Lutice database';
 
-    public function __construct(EntityManagerInterface $entityManager){
+
+
+    public function __construct(EntityManagerInterface $entityManager, string $defaultDashboardDir){
         $this->entityManager = $entityManager;
-	parent::__construct();
+		$this->defaultDashboardDir = $defaultDashboardDir;
+		parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addArgument('DashboardsDirectory', InputArgument::REQUIRED, 'The path of the dashboard JSON to import');
+        $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The path of the dashboard JSON to import', $this->defaultDashboardDir);
         $this->setHelp('This command allows you to import the BBB JSON dashboards into the database');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
 		$io = new SymfonyStyle($input, $output);
-        $dashboard_path = $input->getArgument('DashboardsDirectory');
+        $dashboard_dir = $input->getArgument('DashboardsDirectory');
 
-        $io->title('Importing dashboards from directory "' . $dashboard_path . '"');
+		
+        $io->title('Importing dashboards from directory "' . $dashboard_dir . '"');
 
-        // Find all the JSON files in the directory
-		$io->section('Looking for JSON files...');
-        $dashboardFiles = glob($dashboard_path . '/*.json');
-        $io->info('Found ' . count($dashboardFiles) . ' dashboards to import in directory "' . $dashboard_path . '".');
-		$result = $io->confirm("Do you want to import these dashboards?", true);
+		$io->section("Fetching all non-ready meetings...");
+
+		// Get all the meetings that are not imported (dahboardReady = false)
+		$meetings = $this->entityManager->getRepository('App\Entity\Meeting')->findBy(['dashboardReady' => false]);
+		if (count($meetings) == 0)
+		{
+			$io->info("All meetings are already up to date.");
+			return Command::SUCCESS;
+		}
+
+		$io->info('Found ' . count($meetings) . ' meetings waiting to be updated.');
+		$result = $io->confirm("Do you want to update these meetings?", true);
 		if (!$result)
 		{
 			$io->warning("Aborted by user.");
 			return Command::FAILURE;
 		}
 
-		$failures = [];
+		$status_meetings = [];
+		foreach ($meetings as $meeting) {
 
-// 		$io->progressStart(count($dashboardFiles));
-        // Import each dashboard
-        foreach ($dashboardFiles as $dashboardFile) {
-            $io->section("Importing dashboard " . $dashboardFile . "...");
-            if (!$this->importDashboard($dashboardFile, $io)){
-				$failures[] = $dashboardFile;
+			// Find all the JSON files in the directory
+			$io->section('Looking for JSON files...');
+			$dashboard_files = glob($dashboard_dir . '/' .$meeting->getRecordId. '/*.json' );
+
+			$n_files = count($dashboard_files);
+			if($n_files < 1) {
+				$status_meetings[DashCodeStatus::DashboardNotFound][] = $meeting;
+				$io->caution(DashCodeStatus::DashboardNotFound->getReturnCodeMessage());
+				continue;
 			}
-// 			$io->progressAdvance();
+			else if($n_files > 1){
+				$status_meetings[DashCodeStatus::MultipleDashboards][] = $meeting;
+				$io->caution(DashCodeStatus::MultipleDashboards->getReturnCodeMessage());
+				continue;
+			}
+
+			$dashboard_file = $dashboard_files[0];
+
+            $io->section("Importing dashboard " . $dashboard_file . "...");
+            $return_code = $this->importDashboardToMeeting($meeting, $dashboard_file, $io);
+
+			$status_meetings[$return_code][] = $meeting;
         }
 
-// 		$io->progressFinish();
-		if (count($failures) > 0){
-			$text_failures = "";
-			foreach ($failures as $failure)
+		// Make feedback to user
+		if (count($status_meetings[DashCodeStatus::OK]) != count($meetings)){
+			foreach ($status_meetings as $error_type => $failed_meetings)
 			{
-				$text_failures .= basename($failure) . "\n";
+				if (count($failed_meetings) < 1) continue;
+				$text_failure = [(string)$error_type . ":"];
+				array_walk($failed_meetings, function (&$value, &$key){
+					$value = "" . $value->getMeetingId();
+				});
+				$error_text = array_merge($text_failure, $failed_meetings);
+
+				$io->error($error_text);
 			}
 			$io->error([
-				"Failed to import ". count($failures) ." out of ". count($dashboardFiles) ." dashboards.",
-				"Failed dashboards are :",
-				$text_failures
+				"Failed to update ". count($meetings) - count($status_meetings[DashCodeStatus::OK]) ." out of ". count($meetings) ." meetings.",
 			]);
 			return Command::FAILURE;
 		}
 
-		if (count($dashboardFiles) == 0)
-		{
-			$io->info("No dashboards found in directory '". $dashboard_path ."'");
-			return Command::SUCCESS;
-		}
-        $io->success('Successfully imported '. count($dashboardFiles) .' Dashboards to the existing database.');
+        $io->success('Successfully imported '. count($meetings) .' dashboards to the existing database.');
         return Command::SUCCESS;
     }
 
-    protected function importDashboard($dashboard_path, $io) : bool 
+    protected function importDashboardToMeeting($meeting, $dashboard_path, $io) : DashCodeStatus 
     {
 		$io->text("Serializing '". $dashboard_path ."'...");
         // Serialze the JSON file into an nested array
         $dashboard = json_decode(file_get_contents($dashboard_path), true);
+		if ($meeting->getMeetingId() != $dashboard['extId'])
+		{
+			$io->caution(DashCodeStatus::UnmatchedMeetingId->getReturnCodeMessage());
+			return DashCodeStatus::UnmatchedMeetingId;
+		}
 		$io->newLine();
-
-		$io->text("Fetching '". $dashboard['name'] . "' (" .$dashboard['extId']. ") from the database...");
-        // Get the meeting entity from the database
-        $meeting = $this->entityManager->getRepository('App\Entity\Meeting')->findOneBy(['meetingId' => $dashboard['extId']]);
-
-        if (!$meeting){
-            $io->error("Failed to retrieve meeting '". $dashboard['extId'] ."'...");
-			return false;
-        }	
-		$io->text("Found meeting (id = ". $meeting->getId() .") '". $meeting->getMeetingId() ."'.");
+		$io->text("Serialized '". $dashboard['name'] . "' for meeting (" .$dashboard['extId']. ").");
 
 		$event = $meeting->getEvent();
 		if (!$event)
 		{
-			$io->error([
+			$io->caution([
+				DashCodeStatus::NoBindedEventToMeeting->getReturnCodeMessage(),
 				"No event found for meeting (id = ". $meeting->getId() .")",
 				"Meeting_id = ". $meeting->getMeetingId() ."",
 				"Please create an event for this meeting before importing the dashboard."
 			]);
-			return false;
+			return DashCodeStatus::NoBindedEventToMeeting;
 		}
 
 		$io->section("Importing infos...");
@@ -128,7 +174,7 @@ class ImportDashboards extends Command
 		$io->text("Saved meeting '". $meeting->getMeetingId() ."'.");
 		$io->section("Importing courses...");
 
-        foreach ($dashboard['users'] as $key => $user_info)
+        foreach ($dashboard['users'] as $user_info)
 		{
 			$io->section("'". $user_info['name'] ."'");
 			// Find or define the ELEVE
@@ -168,7 +214,7 @@ class ImportDashboards extends Command
 			if (!$cours)
 			{
 				// Create a new one only if it doesn't exist already
-				$io->caution("No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'. Creating one...");
+				$io->note("No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'. Creating one...");
 				$cours = new Cours();
 				$cours->setEvent($event);
 				$cours->setEleve($eleve);
@@ -198,7 +244,7 @@ class ImportDashboards extends Command
 		$io->newLine();
 		$io->note("Successfully imported '". $dashboard_path ."'!");
 
-		return true;
+		return DashCodeStatus::OK;
 	}
 
 	// Returns the total time spent on webcams from the webcams array
@@ -244,6 +290,10 @@ class ImportDashboards extends Command
 		];
     }
 
+	// private function getAllNonImportedDashboards() : array
+	// {
+	// 	return array();
+	// }
 
 	private function getInternalBBBId(string $externalId) : int
 	{

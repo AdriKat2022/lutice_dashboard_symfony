@@ -119,7 +119,10 @@ class Meeting
 
     #[ORM\Column(options:['default' => 0])]
     private ?bool $replayOnlyForAdmin = false;
-    
+
+    #[ORM\Column(options:['default' => 0])]
+    private ?bool $dashboardReady = false;
+
     
     /**
          * Constructor
@@ -395,5 +398,16 @@ class Meeting
 
         return $this;
     }
-    
+
+    public function isDashboardReady(): ?bool
+    {
+        return $this->dashboardReady;
+    }
+
+    public function setDashboardReady(bool $dashboardReady): static
+    {
+        $this->dashboardReady = $dashboardReady;
+
+        return $this;
+    }
 }
