@@ -8,14 +8,10 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Doctrine\ORM\EntityManagerInterface;
 
-use App\Entity\Cours;
-use App\Entity\Eleve;
 
-
-class ImportDashboards extends Command
+class UnreadyAllMeetings extends Command
 {
     private $entityManager;
-	private $defaultDashboardDir;
     
     protected static $defaultName = 'app:unready-all-meetings';
     protected static $defaultDescription = 'Set all "dashboardReady" fields to FALSE on the Lutice database';

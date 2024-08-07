@@ -120,6 +120,13 @@ class ImportDashboards extends Command
             $return_code = $this->importDashboardToMeeting($meeting, $dashboard_file, $io);
 
 			$status_meetings[$return_code->value][] = $meeting;
+
+			if ($return_code == DashCodeStatus::OK){
+				// TODO : Maybe delete the dashboard
+				$meeting->setDashboardReady(true);
+				$this->entityManager->persist($meeting);
+				$this->entityManager->flush();
+			}
         }
 
 		$io->title("Dashboard Import summary");
