@@ -13,6 +13,7 @@ use App\Entity\Eleve;
 
 enum DashCodeStatus : string {
 	case OK = "OK";
+	case NoRecordId = "No Record Id";
 	case DashboardNotFound = "Dashboard Not Found";
 	case MultipleDashboards = "Multiple Dashboards";
 	case UnmatchedMeetingId = "Meeting And Dashboard Ids Unmatched";
@@ -23,6 +24,7 @@ enum DashCodeStatus : string {
 
 		return match($this){
 			DashCodeStatus::OK => "",
+			DashCodeStatus::NoRecordId => "There are no recordId for the following meeting(s)",
 			DashCodeStatus::DashboardNotFound => "No dashboard could be found for the following meeting(s)",
 			DashCodeStatus::MultipleDashboards => "Multiple dashboard have been found for the following meeting(s)",
 			DashCodeStatus::UnmatchedMeetingId => "The meeting_id in the existing database does not match the extId in the dashboard for the following meeting(s)",
@@ -79,15 +81,26 @@ class ImportDashboards extends Command
 			return Command::FAILURE;
 		}
 
+		// Prepare the status buffer (for user feedback)
 		$status_meetings = [];
 		foreach (DashCodeStatus::cases() as $code_status)
 			$status_meetings[$code_status->value] = [];
 
 		foreach ($meetings as $meeting) {
 
+			// Check if meeting has a recordId
+			if (!$meeting->getRecordId()){
+				$io->caution([
+					DashCodeStatus::NoRecordId->getReturnCodeMessage(),
+					"id = " . $meeting->getId() . "\nmeeting_id = " . $meeting->getMeetingId()
+			]);
+				continue;
+			}
+
 			// Find all the JSON files in the directory
-			$io->section('Looking for JSON files...');
-			$dashboard_files = glob($dashboard_dir . '/' .$meeting->getRecordId(). '/*.json' );
+			$path = $dashboard_dir . '/' .$meeting->getRecordId(). '/*.json';
+			$io->section('Looking for JSON files as "'.$path.'"...');
+			$dashboard_files = glob($path);
 
 			$n_files = count($dashboard_files);
 			if($n_files < 1) {
@@ -106,33 +119,37 @@ class ImportDashboards extends Command
             $io->section("Importing dashboard " . $dashboard_file . "...");
             $return_code = $this->importDashboardToMeeting($meeting, $dashboard_file, $io);
 
-			$status_meetings[$return_code][] = $meeting;
+			$status_meetings[$return_code->value][] = $meeting;
         }
 
+		$io->title("Dashboard Import summary");
+
 		// Make feedback to user
-		if (
-				!array_key_exists(DashCodeStatus::OK->value, $status_meetings) ||
-				count($status_meetings[DashCodeStatus::OK->value]) != count($meetings)
-			){
+		if (count($status_meetings[DashCodeStatus::OK->value]) != count($meetings)){
 			foreach ($status_meetings as $error_type => $failed_meetings)
 			{
-				if (count($failed_meetings) < 1) continue;
+				if (count($failed_meetings) < 1 || $error_type == DashCodeStatus::OK->value) continue;
 				$text_failure = [(string)$error_type . ":"];
 				array_walk($failed_meetings, function (&$value, $key){
-					$value = "" . $value->getMeetingId();
+					$value = "(id = " . $value->getId() . ") " . $value->getMeetingId();
 				});
 				$error_text = array_merge($text_failure, $failed_meetings);
 
-				$io->error($error_text);
+				$io->text($error_text);
 			}
 			$io->error([
 				"Failed to update ". count($meetings) - count($status_meetings[DashCodeStatus::OK->value]) ." out of ". count($meetings) ." meetings.",
 			]);
-			return Command::FAILURE;
+			// return Command::FAILURE;
 		}
 
-        $io->success('Successfully imported '. count($meetings) .' dashboards to the existing database.');
-        return Command::SUCCESS;
+		$success_imports = count($status_meetings[DashCodeStatus::OK->value]);
+		if ($success_imports > 0){
+			$io->success('Successfully imported '. $success_imports .' dashboards to the existing database.');
+			return Command::SUCCESS;
+		}
+
+		return Command::FAILURE;
     }
 
     protected function importDashboardToMeeting($meeting, $dashboard_path, $io) : DashCodeStatus 
