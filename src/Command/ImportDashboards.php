@@ -7,14 +7,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\DependencyInjection\EnvVarProcessorInterface;
 
 use App\Entity\Cours;
-use App\Entity\Meeting;
 use App\Entity\Eleve;
-use App\Entity\Event;
-use Doctrine\Migrations\Tools\Console\Command\StatusCommand;
-use Symfony\Component\String\CodePointString;
 
 enum DashCodeStatus : string {
 	case OK = "OK";
@@ -39,14 +34,11 @@ enum DashCodeStatus : string {
 
 class ImportDashboards extends Command
 {
-	static $DASHBOARD_DIR="/var/dashboard/";
-
     private $entityManager;
 	private $defaultDashboardDir;
     
     protected static $defaultName = 'app:import-dashboards';
     protected static $defaultDescription = 'Import the BBB JSON dashboards into the Lutice database';
-
 
 
     public function __construct(EntityManagerInterface $entityManager, string $defaultDashboardDir){
@@ -88,20 +80,23 @@ class ImportDashboards extends Command
 		}
 
 		$status_meetings = [];
+		foreach (DashCodeStatus::cases() as $code_status)
+			$status_meetings[$code_status->value] = [];
+
 		foreach ($meetings as $meeting) {
 
 			// Find all the JSON files in the directory
 			$io->section('Looking for JSON files...');
-			$dashboard_files = glob($dashboard_dir . '/' .$meeting->getRecordId. '/*.json' );
+			$dashboard_files = glob($dashboard_dir . '/' .$meeting->getRecordId(). '/*.json' );
 
 			$n_files = count($dashboard_files);
 			if($n_files < 1) {
-				$status_meetings[DashCodeStatus::DashboardNotFound][] = $meeting;
+				$status_meetings[DashCodeStatus::DashboardNotFound->value][] = $meeting;
 				$io->caution(DashCodeStatus::DashboardNotFound->getReturnCodeMessage());
 				continue;
 			}
 			else if($n_files > 1){
-				$status_meetings[DashCodeStatus::MultipleDashboards][] = $meeting;
+				$status_meetings[DashCodeStatus::MultipleDashboards->value][] = $meeting;
 				$io->caution(DashCodeStatus::MultipleDashboards->getReturnCodeMessage());
 				continue;
 			}
@@ -115,12 +110,15 @@ class ImportDashboards extends Command
         }
 
 		// Make feedback to user
-		if (count($status_meetings[DashCodeStatus::OK]) != count($meetings)){
+		if (
+				!array_key_exists(DashCodeStatus::OK->value, $status_meetings) ||
+				count($status_meetings[DashCodeStatus::OK->value]) != count($meetings)
+			){
 			foreach ($status_meetings as $error_type => $failed_meetings)
 			{
 				if (count($failed_meetings) < 1) continue;
 				$text_failure = [(string)$error_type . ":"];
-				array_walk($failed_meetings, function (&$value, &$key){
+				array_walk($failed_meetings, function (&$value, $key){
 					$value = "" . $value->getMeetingId();
 				});
 				$error_text = array_merge($text_failure, $failed_meetings);
@@ -128,7 +126,7 @@ class ImportDashboards extends Command
 				$io->error($error_text);
 			}
 			$io->error([
-				"Failed to update ". count($meetings) - count($status_meetings[DashCodeStatus::OK]) ." out of ". count($meetings) ." meetings.",
+				"Failed to update ". count($meetings) - count($status_meetings[DashCodeStatus::OK->value]) ." out of ". count($meetings) ." meetings.",
 			]);
 			return Command::FAILURE;
 		}
