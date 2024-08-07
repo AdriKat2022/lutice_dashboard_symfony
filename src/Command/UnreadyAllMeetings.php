@@ -32,9 +32,8 @@ class UnreadyAllMeetings extends Command
     {
 		$io = new SymfonyStyle($input, $output);
         $inverse = $input->getArgument('Inverse');
-
-		
-        $io->title('Set all meetings "dashboardReady" field to ' . $inverse);
+		$inverse_text = $inverse ? "TRUE" : "FALSE";
+        $io->title('Set all meetings "dashboardReady" field to ' . $inverse_text);
 
 		$io->section("Fetching all meetings...");
 
@@ -46,7 +45,7 @@ class UnreadyAllMeetings extends Command
 		}
 
 		$io->info('Found ' . count($meetings) . ' meetings.');
-		$result = $io->confirm("Do you really want to set 'dashboardReady' to " . $inverse . " for all (". count($meetings) .") meetings ", true);
+		$result = $io->confirm("Do you really want to set 'dashboardReady' to " . $inverse_text . " for all (". count($meetings) .") meetings ", true);
 		if (!$result)
 		{
 			$io->warning("Aborted by user.");
@@ -56,7 +55,7 @@ class UnreadyAllMeetings extends Command
 		foreach ($meetings as $meeting) {
 			$meeting->setDashboardReady($inverse);
 			$this->entityManager->persist($meeting);
-			$io->text("Set " . $meeting->getMeetingId() . " (" . $meeting->getId . ")");
+			$io->text("Set " . $meeting->getMeetingId() . " (id = " . $meeting->getId() . ")");
 		}
 
 		$this->entityManager->flush();
