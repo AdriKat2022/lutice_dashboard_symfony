@@ -31,9 +31,22 @@ class UnreadyAllMeetings extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
 		$io = new SymfonyStyle($input, $output);
-        $inverse = $input->getArgument('Inverse');
-		$inverse_text = $inverse ? "TRUE" : "FALSE";
-        $io->title('Set all meetings "dashboardReady" field to ' . $inverse_text);
+        $flag = $input->getArgument('Inverse');
+		if (!is_bool($flag)){
+			switch($flag){
+				case "true":
+					$flag = true;
+					break;
+				case "false":
+					$flag = false;
+					break;
+				default:
+					$io->error("Argument error: Must be a bool ('true' or 'false')");
+					return Command::FAILURE;
+			}
+		}
+		$flag_text = $flag ? "TRUE" : "FALSE";
+        $io->title('Set all meetings "dashboardReady" field to ' . $flag_text);
 
 		$io->section("Fetching all meetings...");
 
@@ -45,7 +58,7 @@ class UnreadyAllMeetings extends Command
 		}
 
 		$io->info('Found ' . count($meetings) . ' meetings.');
-		$result = $io->confirm("Do you really want to set 'dashboardReady' to " . $inverse_text . " for all (". count($meetings) .") meetings ", true);
+		$result = $io->confirm("Do you really want to set 'dashboardReady' to " . $flag_text . " for all (". count($meetings) .") meetings ", true);
 		if (!$result)
 		{
 			$io->warning("Aborted by user.");
@@ -53,7 +66,7 @@ class UnreadyAllMeetings extends Command
 		}
 
 		foreach ($meetings as $meeting) {
-			$meeting->setDashboardReady($inverse);
+			$meeting->setDashboardReady($flag);
 			$this->entityManager->persist($meeting);
 			$io->text("Set " . $meeting->getMeetingId() . " (id = " . $meeting->getId() . ")");
 		}
