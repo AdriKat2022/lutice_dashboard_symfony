@@ -28,21 +28,75 @@
                 <td>{{ meeting.starttime | date("H:i") }}</td>
                 <td>{{ meeting.endtime | date("H:i") }}</td>
                 <td>{{ meeting.duration is empty ? "Non spécifiée" : meeting.duration | date("H:i:s") }}</td>
-
+                {% set meetingDuration = (meeting.endtime.timestamp - meeting.starttime.timestamp) %}
         </table>
     </div>
-    <div class="container mt-5">
+    <div class="container-fluid mt-5 p-5">
         <h3>Participants</h3>
         <table class="table">
             <thead>
                 <tr>
-                    <th scope="col">Nom</th>
+                    <th scope="col">Utilisateur</th>
+                    <th scope="col">Temps en ligne</th>
+                    <th scope="col">Temps de parole</th>
+                    <th scope="col">Temps de partage de caméra</th>
+                    <th scope="col">Messages</th>
+                    <th scope="col">Emojis</th>
+                    <th scope="col">Mains levées</th>
+                    <th scope="col">Niveau d'activité</th>
                 </tr>
             </thead>
             <tbody>
                 {% for cours in all_courses %}
                     <tr>
-                        <td>{{ "#{cours.eleve.firstName} #{cours.eleve.lastname}" }}</td>
+                        <td class="flex">
+                            <div class="inline-block">
+                                {{ "#{cours.eleve.firstName} #{cours.eleve.lastname}" }}
+                                <p class="text-xs text-muted mb-0 mt-2"><i class="bi bi-arrow-right-square me-2"></i>{{ cours.starttime | date("H:i") }}</p>
+                                <p class="text-xs text-muted mb-0"><i class="bi bi-arrow-left-square me-2"></i>{{ cours.endtime | date("H:i") }}</p>
+                            </div>
+                        </td>
+                        <td class="flex align-middle">
+                            <div class="inline-block">
+                                {% if cours.onlineTime is empty %}
+                                    Non spécifié
+                                {% else %}
+                                    {% set seconds_full = cours.onlineTime / 1000 %}
+                                    {% set hours = seconds_full // 3600 %}
+                                    {% set minutes = (seconds_full % 3600) // 60 %}
+                                    {% set seconds = (seconds_full % 60) %}
+
+                                    {% if hours == 0 and minutes == 0 %}
+                                        Moins d'une minute
+                                    {% elseif hours == 0 %}
+                                        {{ minutes }} minute(s)
+                                    {% else %}
+                                        {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
+                                    {% endif %}
+                                    <div class="progress">
+                                        {% set percentage = (100 * seconds_full / meetingDuration) | round %}
+                                        <div class="progress-bar" role="progressbar" style="width: {{ percentage }}%">{{ percentage }} %</div>
+                                    </div>
+                                {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {% if cours.talkTime is empty %}
+                                Non spécifié
+                            {% else %}
+                                {% set seconds_full = cours.talkTime / 1000 %}
+                                {% set hours = seconds_full // 3600 %}
+                                {% set minutes = (seconds_full % 3600) // 60 %}
+                                {% set seconds = (seconds_full % 60) %}
+
+                                {% if hours == 0 and minutes == 0 %}
+                                    &lt; 1 minute
+                                {% elseif hours == 0 %}
+                                    {{ minutes }} minute(s)
+                                {% else %}
+                                    {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
+                                {% endif %}
+                            {% endif %}
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
