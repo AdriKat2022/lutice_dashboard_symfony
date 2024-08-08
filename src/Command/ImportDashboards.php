@@ -53,40 +53,56 @@ class ImportDashboards extends Command
     protected function configure(): void
     {
         $this->setHelp('This command allows you to import the BBB JSON dashboards into the database');
-        $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The path of the dashboard JSON to import', $this->defaultDashboardDir);
-		$this->addOption('teacher', null, InputOption::VALUE_OPTIONAL, 'Import intervenant ?', false);
-		$this->addOption('eleve', null, InputOption::VALUE_OPTIONAL, 'Import participant ?', false);
-		$this->addOption('masterclass', null, InputOption::VALUE_NONE | InputOption::VALUE_NEGATABLE, 'Import masterclass ?');
+        $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The directory path of the JSONs location', $this->defaultDashboardDir);
+		$this->addOption('ignoreReadyFlag', null, InputOption::VALUE_OPTIONAL, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag', false);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
 		$io = new SymfonyStyle($input, $output);
-        $dashboard_dir = $input->getArgument('DashboardsDirectory');
-
-		// Get the options
-		$import_teacher = $input->getOption('teacher');
-		$import_eleve = $input->getOption('eleve');
-		$import_masterclass = $input->getOption('masterclass');
-
-		// Print them (we will use them later)
-		$io->text("Importing teachers: ". ($import_teacher ? "YES" : "NO"));
-		$io->text("Importing students: ". ($import_eleve ? "YES" : "NO"));
-		$io->text("Importing masterclasses: ". ($import_masterclass ? "YES" : "NO"));
 		
+		// Get the args and options
+        $dashboard_dir = $input->getArgument('DashboardsDirectory');
+		$ignore_ready_flag = $input->getOption('ignoreReadyFlag');
+
         $io->title('Importing dashboards from directory "' . $dashboard_dir . '"');
 
-		$io->section("Fetching all non-ready meetings...");
+		if (!is_dir($dashboard_dir))
+		{
+			$io->error([
+				"The directory '". $dashboard_dir ."' does not exist.",
+				"Please provide a valid directory path in the .env file or as the argument."
+			]);
+			return Command::FAILURE;
+		}
 
-		// Get all the meetings that are not imported (dahboardReady = false)
-		$meetings = $this->entityManager->getRepository('App\Entity\Meeting')->findBy(['dashboardReady' => false]);
+		if ($ignore_ready_flag){
+			$io->warning("The 'ignoreReadyFlag' option is set to TRUE. All dashboards will be re-imported.");
+			$io->section("Fetching all meetings...");
+		}
+		else
+			$io->section("Fetching all non-ready meetings...");
+
+		// Get all the meetings according to the options 
+		$meetings = $ignore_ready_flag ?
+			$this->entityManager->getRepository('App\Entity\Meeting')->findAll() :
+			$this->entityManager->getRepository('App\Entity\Meeting')->findBy(['dashboardReady' => false]);
+
 		if (count($meetings) == 0)
 		{
-			$io->info("All meetings are already up to date.");
+			if ($ignore_ready_flag)
+				$io->info("All meetings are already up to date.");
+			else
+				$io->info("There are no meeting in the database.");
 			return Command::SUCCESS;
 		}
 
-		$io->info('Found ' . count($meetings) . ' meetings waiting to be updated.');
+		if ($ignore_ready_flag)
+			$io->info('Found ' . count($meetings) . ' meetings.');
+		else
+			$io->info('Found ' . count($meetings) . ' meetings waiting to be updated.');
+		
+		
 		$result = $io->confirm("Do you want to update these meetings?", true);
 		if (!$result)
 		{
