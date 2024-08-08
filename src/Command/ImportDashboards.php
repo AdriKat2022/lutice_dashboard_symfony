@@ -19,6 +19,8 @@ enum DashCodeStatus : string {
 	case MultipleDashboards = "Multiple Dashboards";
 	case UnmatchedMeetingId = "Meeting And Dashboard Ids Unmatched";
 	case NoBindedEventToMeeting = "No Binded Event To Meeting";
+	case NoCreateEleve = "Prevent Create Eleve";
+	case NoCreateCours = "Prevent Create Cours";
 	case Unknown = "Unknown Error";
 
 	public function getReturnCodeMessage(){
@@ -30,6 +32,8 @@ enum DashCodeStatus : string {
 			DashCodeStatus::MultipleDashboards => "Multiple dashboard have been found for the following meeting(s)",
 			DashCodeStatus::UnmatchedMeetingId => "The meeting_id in the existing database does not match the extId in the dashboard for the following meeting(s)",
 			DashCodeStatus::NoBindedEventToMeeting => "There are no binded event for the following meeting(s)",
+			DashCodeStatus::NoCreateEleve => "No eleve could be found for the following meeting(s) (the prevent create option is set to TRUE)",
+			DashCodeStatus::NoCreateCours => "No cours could be found for the following meeting(s) (the prevent create option is set to TRUE)",
 			DashCodeStatus::Unknown => ""
 		};
 	}
@@ -54,7 +58,8 @@ class ImportDashboards extends Command
     {
         $this->setHelp('This command allows you to import the BBB JSON dashboards into the database');
         $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The directory path of the JSONs location', $this->defaultDashboardDir);
-		$this->addOption('ignoreReadyFlag', null, InputOption::VALUE_OPTIONAL, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag', false);
+		$this->addOption('force-refresh', 'fr', InputOption::VALUE_NONE, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag');
+		$this->addOption('prevent-create', 'pc', InputOption::VALUE_NONE, 'Prevents the creation of new Eleves and Cours if they do not exist');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -63,7 +68,8 @@ class ImportDashboards extends Command
 		
 		// Get the args and options
         $dashboard_dir = $input->getArgument('DashboardsDirectory');
-		$ignore_ready_flag = $input->getOption('ignoreReadyFlag');
+		$ignore_ready_flag = $input->getOption('force-refresh');
+		$prevent_create = $input->getOption('prevent-create');
 
         $io->title('Importing dashboards from directory "' . $dashboard_dir . '"');
 
@@ -91,9 +97,9 @@ class ImportDashboards extends Command
 		if (count($meetings) == 0)
 		{
 			if ($ignore_ready_flag)
-				$io->info("All meetings are already up to date.");
-			else
 				$io->info("There are no meeting in the database.");
+			else
+				$io->info("All meetings are already up to date.");
 			return Command::SUCCESS;
 		}
 
@@ -146,7 +152,7 @@ class ImportDashboards extends Command
 			$dashboard_file = $dashboard_files[0];
 
             $io->section("Importing dashboard " . $dashboard_file . "...");
-            $return_code = $this->importDashboardToMeeting($meeting, $dashboard_file, $io);
+            $return_code = $this->importDashboardToMeeting($meeting, $prevent_create, $dashboard_file, $io);
 
 			$status_meetings[$return_code->value][] = $meeting;
 
@@ -188,7 +194,7 @@ class ImportDashboards extends Command
 		return Command::FAILURE;
     }
 
-    protected function importDashboardToMeeting($meeting, $dashboard_path, $io) : DashCodeStatus 
+    protected function importDashboardToMeeting($meeting, $prevent_create, $dashboard_path, $io) : DashCodeStatus 
     {
 		$io->text("Serializing '". $dashboard_path ."'...");
         // Serialze the JSON file into an nested array
@@ -238,6 +244,14 @@ class ImportDashboards extends Command
 
 			if (!$eleve)
 			{
+				if ($prevent_create)
+				{
+					$io->caution([
+						"No student found for '". $eleve_id ."'.",
+						"Prevent create option is set to TRUE."
+					]);
+					return DashCodeStatus::NoCreateCours;
+				}
 				$eleve = new Eleve();
 				$eleve->setId($eleve_id); // Useless, the id is auto-generated and cannot be changed
 				$fullname = explode(" ", $user_info['name']);
@@ -264,6 +278,14 @@ class ImportDashboards extends Command
 
 			if (!$cours)
 			{
+				if ($prevent_create)
+				{
+					$io->caution([
+						"No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'.",
+						"Prevent create option is set to TRUE."
+					]);
+					return DashCodeStatus::NoCreateCours;
+				}
 				// Create a new one only if it doesn't exist already
 				$io->note("No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'. Creating one...");
 				$cours = new Cours();
