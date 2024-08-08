@@ -59,7 +59,7 @@ class ImportDashboards extends Command
         $this->setHelp('This command allows you to import the BBB JSON dashboards into the database');
         $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The directory path of the JSONs location', $this->defaultDashboardDir);
 		$this->addOption('force-refresh', 'fr', InputOption::VALUE_NONE, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag');
-		$this->addOption('prevent-create', 'pc', InputOption::VALUE_NONE, 'Prevents the creation of new Eleves and Cours if they do not exist');
+		$this->addOption('prevent-create', 'pc', InputOption::VALUE_OPTIONAL, 'Prevents the creation of new Eleves and Cours if they do not exist [all, eleve, cours, none]', 'none');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -70,6 +70,22 @@ class ImportDashboards extends Command
         $dashboard_dir = $input->getArgument('DashboardsDirectory');
 		$ignore_ready_flag = $input->getOption('force-refresh');
 		$prevent_create = $input->getOption('prevent-create');
+
+		// Check the prevent-create option
+		if (!$prevent_create)
+		{
+			// Default value
+			$prevent_create = 'all';
+		}
+		if (!in_array($prevent_create, ['all', 'eleve', 'cours', 'none']))
+		{
+			$io->error([
+				"The 'prevent-create' option must be one of the following values: 'all', 'eleve', 'cours'.",
+				"You provided the value '". $prevent_create ."'",
+				"Please provide a valid value (no value provided is the same as 'all')."
+			]);
+			return Command::FAILURE;
+		}
 
         $io->title('Importing dashboards from directory "' . $dashboard_dir . '"');
 
@@ -82,13 +98,20 @@ class ImportDashboards extends Command
 			return Command::FAILURE;
 		}
 
+		if ($prevent_create != 'none'){
+			// Make a note for the user about the prevent-create option
+			$io->note([
+				"The 'prevent-create' option is set to '". $prevent_create ."'"
+			]);
+		}
+		
 		if ($ignore_ready_flag){
 			$io->warning("The 'ignoreReadyFlag' option is set to TRUE. All dashboards will be re-imported.");
 			$io->section("Fetching all meetings...");
 		}
 		else
 			$io->section("Fetching all non-ready meetings...");
-
+	
 		// Get all the meetings according to the options 
 		$meetings = $ignore_ready_flag ?
 			$this->entityManager->getRepository('App\Entity\Meeting')->findAll() :
@@ -244,13 +267,13 @@ class ImportDashboards extends Command
 
 			if (!$eleve)
 			{
-				if ($prevent_create)
+				if ($prevent_create == 'eleve' || $prevent_create == 'all')
 				{
 					$io->caution([
 						"No student found for '". $eleve_id ."'.",
-						"Prevent create option is set to TRUE."
+						"Prevent create option for eleve is set to TRUE."
 					]);
-					return DashCodeStatus::NoCreateCours;
+					return DashCodeStatus::NoCreateEleve;
 				}
 				$eleve = new Eleve();
 				$eleve->setId($eleve_id); // Useless, the id is auto-generated and cannot be changed
@@ -278,11 +301,11 @@ class ImportDashboards extends Command
 
 			if (!$cours)
 			{
-				if ($prevent_create)
+				if ($prevent_create == 'cours' || $prevent_create == 'all')
 				{
 					$io->caution([
 						"No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'.",
-						"Prevent create option is set to TRUE."
+						"Prevent create option for cours is set to TRUE."
 					]);
 					return DashCodeStatus::NoCreateCours;
 				}
