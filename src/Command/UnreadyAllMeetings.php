@@ -5,6 +5,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -24,29 +25,17 @@ class UnreadyAllMeetings extends Command
 
     protected function configure(): void
     {
-        $this->addArgument('Inverse', InputArgument::OPTIONAL, 'Set TRUE instead of FALSE for all meetings', false);
         $this->setHelp('This command allows you to import the BBB JSON dashboards into the database');
+        $this->addOption('inverse', null, InputOption::VALUE_NONE, 'Set TRUE instead of FALSE for all meetings.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
 		$io = new SymfonyStyle($input, $output);
-        $flag = $input->getArgument('Inverse');
-		if (!is_bool($flag)){
-			switch($flag){
-				case "true":
-					$flag = true;
-					break;
-				case "false":
-					$flag = false;
-					break;
-				default:
-					$io->error("Argument error: Must be a bool ('true' or 'false')");
-					return Command::FAILURE;
-			}
-		}
-		$flag_text = $flag ? "TRUE" : "FALSE";
-        $io->title('Set all meetings "dashboardReady" field to ' . $flag_text);
+        $inverse_flag = $input->getOption('inverse');
+
+		$inverse_flag_text = $inverse_flag ? "TRUE" : "FALSE";
+        $io->title('Set all meetings "dashboardReady" field to ' . $inverse_flag_text);
 
 		$io->section("Fetching all meetings...");
 
@@ -58,7 +47,7 @@ class UnreadyAllMeetings extends Command
 		}
 
 		$io->info('Found ' . count($meetings) . ' meetings.');
-		$result = $io->confirm("Do you really want to set 'dashboardReady' to " . $flag_text . " for all (". count($meetings) .") meetings ", true);
+		$result = $io->confirm("Do you really want to set 'dashboardReady' to " . $inverse_flag_text . " for all (". count($meetings) .") meetings ", true);
 		if (!$result)
 		{
 			$io->warning("Aborted by user.");
@@ -66,7 +55,7 @@ class UnreadyAllMeetings extends Command
 		}
 
 		foreach ($meetings as $meeting) {
-			$meeting->setDashboardReady($flag);
+			$meeting->setDashboardReady($inverse_flag);
 			$this->entityManager->persist($meeting);
 			$io->text("Set " . $meeting->getMeetingId() . " (id = " . $meeting->getId() . ")");
 		}

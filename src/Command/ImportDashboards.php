@@ -5,6 +5,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -51,8 +52,11 @@ class ImportDashboards extends Command
 
     protected function configure(): void
     {
-        $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The path of the dashboard JSON to import', $this->defaultDashboardDir);
         $this->setHelp('This command allows you to import the BBB JSON dashboards into the database');
+        $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The path of the dashboard JSON to import', $this->defaultDashboardDir);
+		$this->addOption('teacher', null, InputOption::VALUE_OPTIONAL, 'Import intervenant ?', false);
+		$this->addOption('eleve', null, InputOption::VALUE_OPTIONAL, 'Import participant ?', false);
+		$this->addOption('masterclass', null, InputOption::VALUE_NONE | InputOption::VALUE_NEGATABLE, 'Import masterclass ?');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -60,6 +64,15 @@ class ImportDashboards extends Command
 		$io = new SymfonyStyle($input, $output);
         $dashboard_dir = $input->getArgument('DashboardsDirectory');
 
+		// Get the options
+		$import_teacher = $input->getOption('teacher');
+		$import_eleve = $input->getOption('eleve');
+		$import_masterclass = $input->getOption('masterclass');
+
+		// Print them (we will use them later)
+		$io->text("Importing teachers: ". ($import_teacher ? "YES" : "NO"));
+		$io->text("Importing students: ". ($import_eleve ? "YES" : "NO"));
+		$io->text("Importing masterclasses: ". ($import_masterclass ? "YES" : "NO"));
 		
         $io->title('Importing dashboards from directory "' . $dashboard_dir . '"');
 
