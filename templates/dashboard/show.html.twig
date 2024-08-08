@@ -1,17 +1,50 @@
-<!DOCTYPE html>
-<html lang="en" data-darkreader-mode="dynamic" data-darkreader-scheme="dark" dir="ltr">
-<header>
-    <title>Dashboard</title>
-</header>
-<body>
-   <h1>Dashboard for meeting {{ meeting.meetingId }}</h1> 
-   <ul>
-        <li>Nom : {{ meeting.meetingName }}</li>
-        <li>Jour du meeting : {{ meeting.starttime | date("F j, Y") }}</li>
-        <li>Début à : {{ meeting.starttime | date("H:i") }}</li>
-        <li>À terminé à : {{ meeting.endtime | date("H:i") }}</li>
-        <li>Durée totale : {{ meeting.duration is empty ? "Non spécifiée" : meeting.duration | date("H:i:s") }}</li>
-    </ul>
-</body>
+{% extends 'base.html.twig' %}
 
-</html>
+
+{% block title %}
+    Vue du dashboard
+{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <h2 class="text-center">{{ meeting.meetingName }}</h2> 
+    </div>
+
+    <div class="container">
+        <h3>Détails du meeting</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">Nom</th>
+                    <th scope="col">Jour du meeting</th>
+                    <th scope="col">Début à</th>
+                    <th scope="col">Fin à</th>
+                    <th scope="col">Durée totale</th>
+                </tr>
+            </thead>
+            <tbody>
+                <td>{{ meeting.meetingName }}</td>
+                <td>{{ meeting.starttime | date("F j, Y") }}</td>
+                <td>{{ meeting.starttime | date("H:i") }}</td>
+                <td>{{ meeting.endtime | date("H:i") }}</td>
+                <td>{{ meeting.duration is empty ? "Non spécifiée" : meeting.duration | date("H:i:s") }}</td>
+
+        </table>
+    </div>
+    <div class="container mt-5">
+        <h3>Participants</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">Nom</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cours in all_courses %}
+                    <tr>
+                        <td>{{ "#{cours.eleve.firstName} #{cours.eleve.lastname}" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+{% endblock %}

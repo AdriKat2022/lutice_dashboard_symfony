@@ -9,6 +9,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
 
 use App\Entity\Meeting;
+use App\Entity\Cours;
 
 class DashboardController extends AbstractController
 {
@@ -31,7 +32,11 @@ class DashboardController extends AbstractController
 
         // If the meeting doesn't exist, return a 404 error
         if (!$meeting) {
-            throw $this->createNotFoundException('The meeting does not exist');
+            return $this->render("dashboard/not_found.html.twig",
+                [
+                    'meeting_id' => $meeting_id,
+                ]
+        );
         }
         
         // If the dashboard isn't ready (dashboardReady property)
@@ -43,11 +48,14 @@ class DashboardController extends AbstractController
         }
 
         // Find all the associated courses for the meeting
-
+        $all_courses = $entityManager
+            ->getRepository(Cours::class)
+            ->findBy([ 'event' => $meeting->getEvent() ]);
 
         return $this->render("dashboard/show.html.twig",
             [
                 'meeting' => $meeting,
+                'all_courses' => $all_courses,
             ]);
     }
 }
