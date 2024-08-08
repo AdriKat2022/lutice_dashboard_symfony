@@ -5,6 +5,13 @@
 </header>
 <body>
    <h1>Dashboard for meeting {{ meeting.meetingId }}</h1> 
+   <ul>
+        <li>Nom : {{ meeting.meetingName }}</li>
+        <li>Jour du meeting : {{ meeting.starttime | date("F j, Y") }}</li>
+        <li>Début à : {{ meeting.starttime | date("H:i") }}</li>
+        <li>À terminé à : {{ meeting.endtime | date("H:i") }}</li>
+        <li>Durée totale : {{ meeting.duration is empty ? "Non spécifiée" : meeting.duration | date("H:i:s") }}</li>
+    </ul>
 </body>
 
 </html>

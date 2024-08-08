@@ -33,9 +33,17 @@ class DashboardController extends AbstractController
         if (!$meeting) {
             throw $this->createNotFoundException('The meeting does not exist');
         }
+        
+        // If the dashboard isn't ready (dashboardReady property)
+        if (!$meeting->isDashboardReady()) {
+            return $this->render("dashboard/not_ready.html.twig",
+                [
+                    'meeting' => $meeting,
+                ]);
+        }
 
         // Find all the associated courses for the meeting
-        
+
 
         return $this->render("dashboard/show.html.twig",
             [
