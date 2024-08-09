@@ -82,6 +82,8 @@
                         <td class="flex text-center align-middle">
                             {% if cours.talkTime is empty %}
                                 Non spécifié
+                            {% elseif cours.talkTime == 0 %}
+                                Pas de parole
                             {% else %}
                                 {% set seconds_full = cours.talkTime / 1000 %}
                                 {% set hours = seconds_full // 3600 %}
@@ -95,6 +97,34 @@
                                 {% else %}
                                     {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
                                 {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {% if cours.webcamTime is empty %}
+                                Non spécifié
+                            {% elseif cours.webcamTime == 0 %}
+                                Pas de caméra 
+                            {% else %}
+                                {% set seconds_full = cours.webcamTime / 1000 %}
+                                {% set hours = seconds_full // 3600 %}
+                                {% set minutes = (seconds_full % 3600) // 60 %}
+                                {% set seconds = (seconds_full % 60) %}
+
+                                {% if hours == 0 and minutes == 0 %}
+                                    &lt; 1 minute
+                                {% elseif hours == 0 %}
+                                    {{ minutes }} minute(s)
+                                {% else %}
+                                    {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {# Si le nombre de message est null ou = 0, alors on affiche une icone #}
+                            {% if cours.messageCount is empty or cours.messageCount == 0 %}
+                                <i class="bi bi-envelope-slash-fill"></i>
+                            {% else %}
+                                {{ cours.messageCount }}
                             {% endif %}
                         </td>
                     </tr>
