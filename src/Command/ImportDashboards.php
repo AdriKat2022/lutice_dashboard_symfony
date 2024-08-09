@@ -61,7 +61,7 @@ class ImportDashboards extends Command
         $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The directory path of the JSONs location', $this->defaultDashboardDir);
 		$this->addOption('force-refresh', 'f', InputOption::VALUE_NONE, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag');
 		$this->addOption('prevent-create', 'p', InputOption::VALUE_OPTIONAL, 'Prevents the creation of new Eleves and Cours if they do not exist [all, eleve, cours, none]', 'none');
-		$this->addOption('compute-activity-lvl', 'a', InputOption::VALUE_REQUIRED, 'Choose or not to compute activity levels to save time and resources [all, nullOnly, none]', 'all');
+		$this->addOption('compute-activity-lvls', 'a', InputOption::VALUE_REQUIRED, 'Choose or not to compute activity levels to save time and resources [all, nullOnly, none]', 'all');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -72,7 +72,7 @@ class ImportDashboards extends Command
         $dashboard_dir = $input->getArgument('DashboardsDirectory');
 		$ignore_ready_flag = $input->getOption('force-refresh');
 		$prevent_create = $input->getOption('prevent-create');
-		$compute_activity_levels = $input->getOption('compute-activity-lvl');
+		$compute_activity_levels = $input->getOption('compute-activity-lvls');
 
 		// Check the prevent-create option
 		if (!$prevent_create)
@@ -196,6 +196,8 @@ class ImportDashboards extends Command
 			if ($return_code == DashCodeStatus::OK){
 				if ($compute_activity_levels != 'none')
 					$this->computeUserActivities($meeting);
+				else
+					$this->io->note("Skipping the activity level computation for meeting (id = ". $meeting->getId() .")");
 
 				$meeting->setDashboardReady(true);
 				$this->entityManager->persist($meeting);
@@ -486,18 +488,22 @@ class ImportDashboards extends Command
 			$raised_hand_points = 0;
 
 			$total_emojis = 0;
-			foreach ($user->getEmojis() as $emoji)
+			$emojis = $user->getEmojis();
+			if($emojis)
 			{
-				if($emoji['name'] != 'raiseHand')
+				foreach ($emojis as $name => $emoji)
 				{
-					$total_emojis += $emoji['count'];
+					if($name != 'raiseHand')
+					{
+						$total_emojis += $emoji['count'];
+					}
+					else
+					{
+						$raised_hand_points = $max_raised_hand == 0 ? 0 : 2 * $emoji['count'] / $max_raised_hand;
+					}
 				}
-				else
-				{
-					$raised_hand_points = $max_raised_hand == 0 ? 0 : 2 * $emoji['count'] / $max_raised_hand;
-				}
+				$emojis_points = $max_emojis == 0 ? 0 : 2 * $total_emojis / $max_emojis;
 			}
-			$emojis_points = $max_emojis == 0 ? 0 : 2 * $total_emojis / $max_emojis;
 
 			$user->setActivityLevel($online_time_points + $talk_time_points + $message_count_points + $emojis_points + $raised_hand_points);
 			$this->entityManager->persist($user);
