@@ -93,9 +93,6 @@ class Cours {
     private ?int $talkTime = null;
 
     #[ORM\Column(nullable: true)]
-    private ?array $emojis = null;
-
-    #[ORM\Column(nullable: true)]
     private ?int $webcamTime = null;
 
     #[ORM\Column(nullable: true)]
@@ -103,6 +100,9 @@ class Cours {
 
     #[ORM\Column(nullable: true)]
     private ?int $connectionCount = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?array $emojis = null;
     
     public function __construct() {
         //$this->eleve = new \Doctrine\Common\Collections\ArrayCollection();
@@ -380,18 +380,6 @@ class Cours {
         return $this;
     }
 
-    public function getEmojis(): ?array
-    {
-        return $this->emojis;
-    }
-
-    public function setEmojis(?array $emojis): static
-    {
-        $this->emojis = $emojis;
-
-        return $this;
-    }
-
     public function getWebcamTime(): ?int
     {
         return $this->webcamTime;
@@ -412,6 +400,18 @@ class Cours {
     public function setConnectionCount(?int $connectionCount): static
     {
         $this->connectionCount = $connectionCount;
+
+        return $this;
+    }
+
+    public function getEmojis(): ?array
+    {
+        return $this->emojis;
+    }
+
+    public function setEmojis(?array $emojis): static
+    {
+        $this->emojis = $emojis;
 
         return $this;
     }

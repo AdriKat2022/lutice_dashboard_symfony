@@ -131,11 +131,30 @@
                         </td>
                         <td class="flex text-center align-middle">
                             {# Si le nombre d'emoji est null ou = 0, alors on affiche une icone #}
-                            {% if cours.emojis is empty or cours.emojis == 0 %}
+                            {% if cours.emojis is empty or (cours.emojis | length) < 1 or (((cours.emojis | length) == 1) and cours.emojis.raiseHand is defined) %}
                                 <p class="mb-0">Pas de réaction</p>
                                 <i class="bi bi-emoji-frown-fill"></i>
                             {% else %}
-                                {{ cours.emojis }}
+                                {% for name, emoji in cours.emojis %}
+                                    {% if name != "raiseHand" %}
+                                        <p class="mb-0">
+                                            <i class="{{ emojis_visual_map[name] }} me-1"></i>
+                                            x {{ emoji.count }}
+                                        </p>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {# Si le nombre d'emoji est null ou = 0, alors on affiche une icone #}
+                            {% if cours.emojis is empty or not cours.emojis.raiseHand is defined %}
+                                <p class="mb-0">Pas de main levée</p>
+                                <i class="bi bi-emoji-frown-fill"></i>
+                            {% else %}
+                                <p class="mb-0">
+                                    <i class="{{ emojis_visual_map.raiseHand }} me-1"></i>
+                                    x {{ cours.emojis.raiseHand.count }}
+                                </p>
                             {% endif %}
                         </td>
                     </tr>

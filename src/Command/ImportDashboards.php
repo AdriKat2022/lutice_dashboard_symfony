@@ -349,7 +349,7 @@ class ImportDashboards extends Command
 		return DashCodeStatus::OK;
 	}
 
-	private function formatEmojis(?array $emojis) : ?string
+	private function formatEmojis(?array $emojis) : ?array
 	{
 		if (!$emojis)
 			return null;
@@ -368,7 +368,7 @@ class ImportDashboards extends Command
 				$emojis_formated[$emoji['name']]['timestamps'] = [$emoji['sentOn']];
 			}
 		}
-		return json_encode($emojis_formated);
+		return $emojis_formated;
 	}
 
 	// Returns the total time spent on webcams from the webcams array
