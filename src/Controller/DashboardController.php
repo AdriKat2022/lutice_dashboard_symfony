@@ -52,10 +52,22 @@ class DashboardController extends AbstractController
             ->getRepository(Cours::class)
             ->findBy([ 'event' => $meeting->getEvent() ]);
 
+        // $all_emojis = [];
+        // foreach ($all_courses as $course) {
+        //     $all_emojis[$course->getId()] = $course->getEmojis();
+        // }
+
         return $this->render("dashboard/show.html.twig",
             [
                 'meeting' => $meeting,
                 'all_courses' => $all_courses,
+                'emojis_visual_map' => [
+                    'raiseHand' => 'bi bi-person-raised-hand',
+                    'happy' => 'bi bi-emoji-smile',
+                    'smile' => 'bi bi-emoji-smile',
+                    'frown' => 'bi bi-emoji-frown',
+                    'neutral' => 'bi bi-emoji-neutral',
+                ],
             ]);
     }
 }
