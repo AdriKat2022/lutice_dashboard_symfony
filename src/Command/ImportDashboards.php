@@ -59,8 +59,9 @@ class ImportDashboards extends Command
     {
         $this->setHelp('This command allows you to import the BBB JSON dashboards into the database');
         $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The directory path of the JSONs location', $this->defaultDashboardDir);
-		$this->addOption('force-refresh', 'fr', InputOption::VALUE_NONE, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag');
-		$this->addOption('prevent-create', 'pc', InputOption::VALUE_OPTIONAL, 'Prevents the creation of new Eleves and Cours if they do not exist [all, eleve, cours, none]', 'none');
+		$this->addOption('force-refresh', 'f', InputOption::VALUE_NONE, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag');
+		$this->addOption('prevent-create', 'p', InputOption::VALUE_OPTIONAL, 'Prevents the creation of new Eleves and Cours if they do not exist [all, eleve, cours, none]', 'none');
+		$this->addOption('compute-activity-lvl', 'a', InputOption::VALUE_REQUIRED, 'Choose or not to compute activity levels to save time and resources [all, nullOnly, none]', 'all');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -71,6 +72,7 @@ class ImportDashboards extends Command
         $dashboard_dir = $input->getArgument('DashboardsDirectory');
 		$ignore_ready_flag = $input->getOption('force-refresh');
 		$prevent_create = $input->getOption('prevent-create');
+		$compute_activity_levels = $input->getOption('compute-activity-lvl');
 
 		// Check the prevent-create option
 		if (!$prevent_create)
@@ -84,6 +86,17 @@ class ImportDashboards extends Command
 				"The 'prevent-create' option must be one of the following values: 'all', 'eleve', 'cours'.",
 				"You provided the value '". $prevent_create ."'",
 				"Please provide a valid value (no value provided is the same as 'all')."
+			]);
+			return Command::FAILURE;
+		}
+
+		// Check the ignore-activity-lvl option
+		if (!in_array($compute_activity_levels, ['all', 'existingOnly', 'none']))
+		{
+			$this->io->error([
+				"The 'ignore-activity-lvl' option must be one of the following values: 'all', 'existingOnly'.",
+				"You provided the value '". $compute_activity_levels ."'",
+				"Please provide a valid value (no value provided is the same as 'none')."
 			]);
 			return Command::FAILURE;
 		}
@@ -176,12 +189,14 @@ class ImportDashboards extends Command
 			$dashboard_file = $dashboard_files[0];
 
             $this->io->section("Importing dashboard " . $dashboard_file . "...");
-            $return_code = $this->importDashboardToMeeting($meeting, $prevent_create, $dashboard_file);
+            $return_code = $this->importDashboardToMeeting($meeting, $prevent_create, $dashboard_file, $compute_activity_levels);
 
 			$status_meetings[$return_code->value][] = $meeting;
 
 			if ($return_code == DashCodeStatus::OK){
-				// TODO : Maybe delete the dashboard
+				if ($compute_activity_levels != 'none')
+					$this->computeUserActivities($meeting);
+
 				$meeting->setDashboardReady(true);
 				$this->entityManager->persist($meeting);
 				$this->entityManager->flush();
@@ -416,6 +431,7 @@ class ImportDashboards extends Command
 		// - The raised hand factor is the ratio of the user's raised hand count to the most hand-raised user's raised hand count
 
 		// The factors are then multiplied by 2 to get a value between 0 and 2
+		$this->io->section("Fetching the max values for the factors...");
 
 		// Let's start by getting the max values for each factor
 		$max_online_time = 0;
@@ -458,7 +474,7 @@ class ImportDashboards extends Command
 			$max_raised_hand = max($max_raised_hand, $total_user_hands);
 		}
 
-
+		$this->io->section("Computing the activity level of the users...");
 
 		// Now we can compute the factors
 		foreach ($all_courses as $user)
@@ -484,9 +500,13 @@ class ImportDashboards extends Command
 			$emojis_points = $max_emojis == 0 ? 0 : 2 * $total_emojis / $max_emojis;
 
 			$user->setActivityLevel($online_time_points + $talk_time_points + $message_count_points + $emojis_points + $raised_hand_points);
+			$this->entityManager->persist($user);
+			$this->io->text("Saved user '". $user->getId() ."' with activity level ". $user->getActivityLevel());
 		}
+		$this->io->text("Saved all users. Flushing...");
+		$this->entityManager->flush();
+		$this->io->text("Done.");
 	}
-
 
 	// Returns the totalOnlineTime and the connectionCount from the intIds array
     private function getUserActivity($user_info) : array
