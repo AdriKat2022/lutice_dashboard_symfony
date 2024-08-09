@@ -43,7 +43,8 @@ class ImportDashboards extends Command
 {
     private $entityManager;
 	private $defaultDashboardDir;
-    
+	private SymfonyStyle $io;
+
     protected static $defaultName = 'app:import-dashboards';
     protected static $defaultDescription = 'Import the BBB JSON dashboards into the Lutice database';
 
@@ -64,7 +65,7 @@ class ImportDashboards extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-		$io = new SymfonyStyle($input, $output);
+		$this->io = new SymfonyStyle($input, $output);
 		
 		// Get the args and options
         $dashboard_dir = $input->getArgument('DashboardsDirectory');
@@ -79,7 +80,7 @@ class ImportDashboards extends Command
 		}
 		if (!in_array($prevent_create, ['all', 'eleve', 'cours', 'none']))
 		{
-			$io->error([
+			$this->io->error([
 				"The 'prevent-create' option must be one of the following values: 'all', 'eleve', 'cours'.",
 				"You provided the value '". $prevent_create ."'",
 				"Please provide a valid value (no value provided is the same as 'all')."
@@ -87,11 +88,11 @@ class ImportDashboards extends Command
 			return Command::FAILURE;
 		}
 
-        $io->title('Importing dashboards from directory "' . $dashboard_dir . '"');
+        $this->io->title('Importing dashboards from directory "' . $dashboard_dir . '"');
 
 		if (!is_dir($dashboard_dir))
 		{
-			$io->error([
+			$this->io->error([
 				"The directory '". $dashboard_dir ."' does not exist.",
 				"Please provide a valid directory path in the .env file or as the argument."
 			]);
@@ -100,17 +101,17 @@ class ImportDashboards extends Command
 
 		if ($prevent_create != 'none'){
 			// Make a note for the user about the prevent-create option
-			$io->note([
+			$this->io->note([
 				"The 'prevent-create' option is set to '". $prevent_create ."'"
 			]);
 		}
 		
 		if ($ignore_ready_flag){
-			$io->warning("The 'ignoreReadyFlag' option is set to TRUE. All dashboards will be re-imported.");
-			$io->section("Fetching all meetings...");
+			$this->io->warning("The 'ignoreReadyFlag' option is set to TRUE. All dashboards will be re-imported.");
+			$this->io->section("Fetching all meetings...");
 		}
 		else
-			$io->section("Fetching all non-ready meetings...");
+			$this->io->section("Fetching all non-ready meetings...");
 	
 		// Get all the meetings according to the options 
 		$meetings = $ignore_ready_flag ?
@@ -120,22 +121,22 @@ class ImportDashboards extends Command
 		if (count($meetings) == 0)
 		{
 			if ($ignore_ready_flag)
-				$io->info("There are no meeting in the database.");
+				$this->io->info("There are no meeting in the database.");
 			else
-				$io->info("All meetings are already up to date.");
+				$this->io->info("All meetings are already up to date.");
 			return Command::SUCCESS;
 		}
 
 		if ($ignore_ready_flag)
-			$io->info('Found ' . count($meetings) . ' meetings.');
+			$this->io->info('Found ' . count($meetings) . ' meetings.');
 		else
-			$io->info('Found ' . count($meetings) . ' meetings waiting to be updated.');
+			$this->io->info('Found ' . count($meetings) . ' meetings waiting to be updated.');
 		
 		
-		$result = $io->confirm("Do you want to update these meetings?", true);
+		$result = $this->io->confirm("Do you want to update these meetings?", true);
 		if (!$result)
 		{
-			$io->warning("Aborted by user.");
+			$this->io->warning("Aborted by user.");
 			return Command::SUCCESS;
 		}
 
@@ -148,7 +149,7 @@ class ImportDashboards extends Command
 
 			// Check if meeting has a recordId
 			if (!$meeting->getRecordId()){
-				$io->caution([
+				$this->io->caution([
 					DashCodeStatus::NoRecordId->getReturnCodeMessage(),
 					"id = " . $meeting->getId() . "\nmeeting_id = " . $meeting->getMeetingId()
 			]);
@@ -157,25 +158,25 @@ class ImportDashboards extends Command
 
 			// Find all the JSON files in the directory
 			$path = $dashboard_dir . '/' .$meeting->getRecordId(). '/*.json';
-			$io->section('Looking for JSON files as "'.$path.'"...');
+			$this->io->section('Looking for JSON files as "'.$path.'"...');
 			$dashboard_files = glob($path);
 
 			$n_files = count($dashboard_files);
 			if($n_files < 1) {
 				$status_meetings[DashCodeStatus::DashboardNotFound->value][] = $meeting;
-				$io->caution(DashCodeStatus::DashboardNotFound->getReturnCodeMessage());
+				$this->io->caution(DashCodeStatus::DashboardNotFound->getReturnCodeMessage());
 				continue;
 			}
 			else if($n_files > 1){
 				$status_meetings[DashCodeStatus::MultipleDashboards->value][] = $meeting;
-				$io->caution(DashCodeStatus::MultipleDashboards->getReturnCodeMessage());
+				$this->io->caution(DashCodeStatus::MultipleDashboards->getReturnCodeMessage());
 				continue;
 			}
 
 			$dashboard_file = $dashboard_files[0];
 
-            $io->section("Importing dashboard " . $dashboard_file . "...");
-            $return_code = $this->importDashboardToMeeting($meeting, $prevent_create, $dashboard_file, $io);
+            $this->io->section("Importing dashboard " . $dashboard_file . "...");
+            $return_code = $this->importDashboardToMeeting($meeting, $prevent_create, $dashboard_file);
 
 			$status_meetings[$return_code->value][] = $meeting;
 
@@ -187,7 +188,7 @@ class ImportDashboards extends Command
 			}
         }
 
-		$io->title("Dashboard Import summary");
+		$this->io->title("Dashboard Import summary");
 
 		// Make feedback to user
 		if (count($status_meetings[DashCodeStatus::OK->value]) != count($meetings)){
@@ -200,9 +201,9 @@ class ImportDashboards extends Command
 				});
 				$error_text = array_merge($text_failure, $failed_meetings);
 
-				$io->text($error_text);
+				$this->io->text($error_text);
 			}
-			$io->error([
+			$this->io->error([
 				"Failed to update ". count($meetings) - count($status_meetings[DashCodeStatus::OK->value]) ." out of ". count($meetings) ." meetings.",
 			]);
 			// return Command::FAILURE;
@@ -210,30 +211,30 @@ class ImportDashboards extends Command
 
 		$success_imports = count($status_meetings[DashCodeStatus::OK->value]);
 		if ($success_imports > 0){
-			$io->success('Successfully imported '. $success_imports .' dashboards to the existing database.');
+			$this->io->success('Successfully imported '. $success_imports .' dashboards to the existing database.');
 			return Command::SUCCESS;
 		}
 
 		return Command::FAILURE;
     }
 
-    protected function importDashboardToMeeting($meeting, $prevent_create, $dashboard_path, $io) : DashCodeStatus 
+    protected function importDashboardToMeeting($meeting, $prevent_create, $dashboard_path) : DashCodeStatus 
     {
-		$io->text("Serializing '". $dashboard_path ."'...");
+		$this->io->text("Serializing '". $dashboard_path ."'...");
         // Serialze the JSON file into an nested array
         $dashboard = json_decode(file_get_contents($dashboard_path), true);
 		if ($meeting->getMeetingId() != $dashboard['extId'])
 		{
-			$io->caution(DashCodeStatus::UnmatchedMeetingId->getReturnCodeMessage());
+			$this->io->caution(DashCodeStatus::UnmatchedMeetingId->getReturnCodeMessage());
 			return DashCodeStatus::UnmatchedMeetingId;
 		}
-		$io->newLine();
-		$io->text("Serialized '". $dashboard['name'] . "' for meeting (" .$dashboard['extId']. ").");
+		$this->io->newLine();
+		$this->io->text("Serialized '". $dashboard['name'] . "' for meeting (" .$dashboard['extId']. ").");
 
 		$event = $meeting->getEvent();
 		if (!$event)
 		{
-			$io->caution([
+			$this->io->caution([
 				DashCodeStatus::NoBindedEventToMeeting->getReturnCodeMessage(),
 				"No event found for meeting (id = ". $meeting->getId() .")",
 				"Meeting_id = ". $meeting->getMeetingId() ."",
@@ -242,7 +243,7 @@ class ImportDashboards extends Command
 			return DashCodeStatus::NoBindedEventToMeeting;
 		}
 
-		$io->section("Importing infos...");
+		$this->io->section("Importing infos...");
 
 		$meeting->setMeetingName($dashboard['name']);
         $meeting->setStartTime((new \DateTime())->setTimestamp((int)($dashboard['createdOn']/1000)));
@@ -255,15 +256,15 @@ class ImportDashboards extends Command
         $this->entityManager->persist($meeting);
         $this->entityManager->flush();
 
-		$io->text("Saved meeting '". $meeting->getMeetingId() ."'.");
-		$io->section("Importing courses...");
+		$this->io->text("Saved meeting '". $meeting->getMeetingId() ."'.");
+		$this->io->section("Importing courses...");
 
         foreach ($dashboard['users'] as $user_info)
 		{
-			$io->section("'". $user_info['name'] ."'");
+			$this->io->section("'". $user_info['name'] ."'");
 			// Find or define the ELEVE
 			$eleve_id = $this->getInternalBBBId($user_info['extId']);
-			$io->text("Finding student of ID: ". $eleve_id ."...");
+			$this->io->text("Finding student of ID: ". $eleve_id ."...");
 			$eleve = $this->entityManager->getRepository('App\Entity\Eleve')->findOneBy(
 				[
 					'id' => $eleve_id
@@ -273,7 +274,7 @@ class ImportDashboards extends Command
 			{
 				if ($prevent_create == 'eleve' || $prevent_create == 'all')
 				{
-					$io->caution([
+					$this->io->caution([
 						"No student found for '". $eleve_id ."'.",
 						"Prevent create option for eleve is set to TRUE."
 					]);
@@ -288,14 +289,14 @@ class ImportDashboards extends Command
 				}
 				$this->entityManager->persist($eleve);
 				$this->entityManager->flush();
-				$io->warning([
+				$this->io->warning([
 					"No student found for '". $eleve_id ."'.",
 					"Created temporary student (id = ". $eleve->getId() .")",
 					"If you wish to save it, change this student's id from ". $eleve->getId() ." to ". $eleve_id ." in the database."
 				]);
 			}
 
-			$io->text("Finding course for event '". $event->getId() ."' and student '". $eleve->getId() ."'...");
+			$this->io->text("Finding course for event '". $event->getId() ."' and student '". $eleve->getId() ."'...");
 			// Find or define the COURS
 			$cours = $this->entityManager->getRepository('App\Entity\Cours')->findOneBy(
 				[
@@ -307,14 +308,14 @@ class ImportDashboards extends Command
 			{
 				if ($prevent_create == 'cours' || $prevent_create == 'all')
 				{
-					$io->caution([
+					$this->io->caution([
 						"No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'.",
 						"Prevent create option for cours is set to TRUE."
 					]);
 					return DashCodeStatus::NoCreateCours;
 				}
 				// Create a new one only if it doesn't exist already
-				$io->note("No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'. Creating one...");
+				$this->io->note("No course found for event '". $event->getId() ."' and student '". $eleve->getId() ."'. Creating one...");
 				$cours = new Cours();
 				$cours->setEvent($event);
 				$cours->setEleve($eleve);
@@ -339,12 +340,12 @@ class ImportDashboards extends Command
 
 			$this->entityManager->persist($cours);
 			$this->entityManager->flush();
-			$io->newLine();
-			$io->text("Saved course (id = ". $cours->getId() .") '". $cours ."'");
+			$this->io->newLine();
+			$this->io->text("Saved course (id = ". $cours->getId() .") '". $cours ."'");
 		}
 
-		$io->newLine();
-		$io->note("Successfully imported '". $dashboard_path ."'!");
+		$this->io->newLine();
+		$this->io->note("Successfully imported '". $dashboard_path ."'!");
 
 		return DashCodeStatus::OK;
 	}
@@ -383,6 +384,110 @@ class ImportDashboards extends Command
 		return [ 'totalTime' => $total_webcam_time ] ;
     }
 
+	// This function should be used AFTER the import of the dashboard because we need all the courses to compute the max values
+	private function computeUserActivities($meeting) : void
+	{
+		$all_courses = $this->entityManager->getRepository('App\Entity\Cours')->findBy([ 'event' => $meeting->getEvent() ]);
+
+		if (!$all_courses || count($all_courses) < 1)
+		{
+			$this->io->warning([
+				"No courses found for the event '". $meeting->getEvent()->getId() ."'",
+				"Cannot compute the activity level of the users."
+			]);
+
+			return;
+		}
+
+		// Compute the activity level of the user within the meeting
+		// The activity level is calculated by the sum of 5 factors each between 0 min and 2 max:
+
+		// 1. The online time factor (compared to the total meeting time)
+		// 2. The talk time factor (compared to the most talkative user (teacher excluded))
+		// 3. The messages count factor (compared to the most messager user (teacher excluded))
+		// 4. The emojis factor (compared to the most emoji user (teacher excluded))
+		// 5. The raised hand factor (compared to the most hand-raised user (teacher excluded))
+
+		// The factors are calculated as follows:
+		// - The online time factor is the ratio of the user's online time to the total meeting time
+		// - The talk time factor is the ratio of the user's talk time to the most talkative user's talk time
+		// - The messages count factor is the ratio of the user's messages count to the most messager user's messages count
+		// - The emojis factor is the ratio of the user's emojis count to the most emoji user's emojis count
+		// - The raised hand factor is the ratio of the user's raised hand count to the most hand-raised user's raised hand count
+
+		// The factors are then multiplied by 2 to get a value between 0 and 2
+
+		// Let's start by getting the max values for each factor
+		$max_online_time = 0;
+		$max_talk_time = 0;
+		$max_message_count = 0;
+		$max_emojis = 0;
+		$max_raised_hand = 0;
+
+		// Get the max values for the emojis
+		foreach ($all_courses as $user)
+		{
+			// There is for the moment no way to know if the user is a teacher or not
+			// if ($user->isTeacher())
+			// 	continue;
+
+			$max_online_time = max($max_online_time, $user->getOnlineTime());
+			$max_talk_time = max($max_talk_time, $user->getTalkTime());
+			$max_message_count = max($max_message_count, $user->getMessageCount());
+			
+			// Count the emojis by hand because the values are inside the key [emoji-name]->count
+			$emojis = $user->getEmojis();
+			$total_user_emojis = 0;
+			$total_user_hands = 0;
+			if ($emojis)
+			{
+				foreach ($emojis as $name => $emoji)
+				{
+					if ($name == 'raiseHand')
+					{
+						$total_user_hands += $emoji['count'];
+					}
+					else
+					{
+						$total_user_emojis += $emoji['count'];
+					}
+				}
+			}
+			
+			$max_emojis = max($max_emojis, $total_user_emojis);
+			$max_raised_hand = max($max_raised_hand, $total_user_hands);
+		}
+
+
+
+		// Now we can compute the factors
+		foreach ($all_courses as $user)
+		{
+			$online_time_points = $max_online_time == 0 ? 0 : 2 * $user->getOnlineTime() / $max_online_time;
+			$talk_time_points = $max_talk_time == 0 ? 0 : 2 * $user->getTalkTime() / $max_talk_time;
+			$message_count_points = $max_message_count == 0 ? 0 : 2 * $user->getMessageCount() / $max_message_count;
+			$emojis_points = 0;
+			$raised_hand_points = 0;
+
+			$total_emojis = 0;
+			foreach ($user->getEmojis() as $emoji)
+			{
+				if($emoji['name'] != 'raiseHand')
+				{
+					$total_emojis += $emoji['count'];
+				}
+				else
+				{
+					$raised_hand_points = $max_raised_hand == 0 ? 0 : 2 * $emoji['count'] / $max_raised_hand;
+				}
+			}
+			$emojis_points = $max_emojis == 0 ? 0 : 2 * $total_emojis / $max_emojis;
+
+			$user->setActivityLevel($online_time_points + $talk_time_points + $message_count_points + $emojis_points + $raised_hand_points);
+		}
+	}
+
+
 	// Returns the totalOnlineTime and the connectionCount from the intIds array
     private function getUserActivity($user_info) : array
     {
@@ -405,6 +510,7 @@ class ImportDashboards extends Command
 			$total_online_time += $connection['leftOn'] - $connection['registeredOn'];
 			$connection_count ++;
 		}
+
 
 		return [
 			'totalOnlineTime' => $total_online_time,
