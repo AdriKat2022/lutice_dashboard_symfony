@@ -32,22 +32,22 @@
     </div>
     <div class="container-fluid mt-5 p-5">
         <h3>Participants</h3>
-        <table class="table">
-            <thead>
+        <table class="table table-hover table-bordered">
+            <thead class="">
                 <tr>
                     <th scope="col">Utilisateur</th>
-                    <th scope="col">Temps en ligne</th>
-                    <th scope="col">Temps de parole</th>
-                    <th scope="col">Temps de partage de caméra</th>
-                    <th scope="col">Messages</th>
-                    <th scope="col">Emojis</th>
-                    <th scope="col">Mains levées</th>
-                    <th scope="col">Niveau d'activité</th>
+                    <th class="text-center" scope="col">Temps en ligne</th>
+                    <th class="text-center" scope="col">Temps de parole</th>
+                    <th class="text-center" scope="col">Temps de partage de caméra</th>
+                    <th class="text-center" scope="col">Messages</th>
+                    <th class="text-center" scope="col">Emojis</th>
+                    <th class="text-center" scope="col">Mains levées</th>
+                    <th class="text-center" scope="col">Niveau d'activité</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="table-group-divider">
                 {% for cours in all_courses %}
-                    <tr>
+                    <tr >
                         <td class="flex">
                             <div class="inline-block">
                                 {{ "#{cours.eleve.firstName} #{cours.eleve.lastname}" }}
@@ -56,7 +56,7 @@
                             </div>
                         </td>
                         <td class="flex align-middle">
-                            <div class="inline-block">
+                            <div class="inline-block text-center">
                                 {% if cours.onlineTime is empty %}
                                     Non spécifié
                                 {% else %}
@@ -124,7 +124,7 @@
                             {# Si le nombre de message est null ou = 0, alors on affiche une icone #}
                             {% if cours.messageCount is empty or cours.messageCount == 0 %}
                                 <p class="mb-0">Pas de message</p>
-                                <i class="bi bi-envelope-slash-fill"></i>
+                                <i class="bi bi-chat-right-dots-fill"></i>
                             {% else %}
                                 {{ cours.messageCount }}
                             {% endif %}
@@ -146,7 +146,7 @@
                             {% endif %}
                         </td>
                         <td class="flex text-center align-middle">
-                            {# Si le nombre d'emoji est null ou = 0, alors on affiche une icone #}
+                            {# Si il n'y a pas d'émoji ou que raiseHand n'est pas défini, alors on affiche une icone #}
                             {% if cours.emojis is empty or not cours.emojis.raiseHand is defined %}
                                 <p class="mb-0">Pas de main levée</p>
                                 <i class="bi bi-emoji-frown-fill"></i>
@@ -155,6 +155,25 @@
                                     <i class="{{ emojis_visual_map.raiseHand }} me-1"></i>
                                     x {{ cours.emojis.raiseHand.count }}
                                 </p>
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {# Si le niveau d'activité n'est pas renseigné, on affiche une icone #}
+                            {% if cours.activityLevel is empty %}
+                                <p class="mb-0">Non calculé</p>
+                                <i class="bi bi-slash-circle-fill"></i>
+                            {% else %}
+                                <div class="d-inline-flex align-items-center">
+                                    {# On affiche le niveau d'activité avec des icones #}
+                                    {% for i in 1..10 %}
+                                        {% if cours.activityLevel >= (i-0.45) %}
+                                            <i class="bi bi-circle-fill me-1"></i>
+                                        {% else %}
+                                            <i class="bi bi-circle me-1"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <span class="badge rounded-full text-bg-secondary ms-1">{{ cours.activityLevel | round(1) }}</span>
+                                </div>
                             {% endif %}
                         </td>
                     </tr>

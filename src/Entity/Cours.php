@@ -103,6 +103,9 @@ class Cours {
 
     #[ORM\Column(nullable: true)]
     private ?array $emojis = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $activityLevel = null;
     
     public function __construct() {
         //$this->eleve = new \Doctrine\Common\Collections\ArrayCollection();
@@ -412,6 +415,18 @@ class Cours {
     public function setEmojis(?array $emojis): static
     {
         $this->emojis = $emojis;
+
+        return $this;
+    }
+
+    public function getActivityLevel(): ?float
+    {
+        return $this->activityLevel;
+    }
+
+    public function setActivityLevel(?float $activityLevel): static
+    {
+        $this->activityLevel = $activityLevel;
 
         return $this;
     }
