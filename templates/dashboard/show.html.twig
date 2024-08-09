@@ -82,7 +82,8 @@
                             {% if cours.talkTime is empty %}
                                 Non spécifié
                             {% elseif cours.talkTime == 0 %}
-                                Pas de parole
+                                <p class="mb-0">Pas de parole</p>
+                                <i class="bi bi-mic-mute-fill"></i>
                             {% else %}
                                 {% set seconds_full = cours.talkTime / 1000 %}
                                 {% set hours = seconds_full // 3600 %}
@@ -102,7 +103,8 @@
                             {% if cours.webcamTime is empty %}
                                 Non spécifié
                             {% elseif cours.webcamTime == 0 %}
-                                Pas de caméra 
+                                <p class="mb-0">Pas de caméra</p>
+                                <i class="bi bi-camera-video-off-fill"></i>
                             {% else %}
                                 {% set seconds_full = cours.webcamTime / 1000 %}
                                 {% set hours = seconds_full // 3600 %}
@@ -121,9 +123,19 @@
                         <td class="flex text-center align-middle">
                             {# Si le nombre de message est null ou = 0, alors on affiche une icone #}
                             {% if cours.messageCount is empty or cours.messageCount == 0 %}
+                                <p class="mb-0">Pas de message</p>
                                 <i class="bi bi-envelope-slash-fill"></i>
                             {% else %}
                                 {{ cours.messageCount }}
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {# Si le nombre d'emoji est null ou = 0, alors on affiche une icone #}
+                            {% if cours.emojis is empty or cours.emojis == 0 %}
+                                <p class="mb-0">Pas de réaction</p>
+                                <i class="bi bi-emoji-frown-fill"></i>
+                            {% else %}
+                                {{ cours.emojis }}
                             {% endif %}
                         </td>
                     </tr>
