@@ -136,7 +136,7 @@ class ImportDashboards extends Command
 		if (!$result)
 		{
 			$io->warning("Aborted by user.");
-			return Command::FAILURE;
+			return Command::SUCCESS;
 		}
 
 		// Prepare the status buffer (for user feedback)
