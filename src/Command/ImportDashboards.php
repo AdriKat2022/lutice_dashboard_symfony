@@ -323,9 +323,11 @@ class ImportDashboards extends Command
 			}
 
 			// Update the fields
-			// TODO : Get Answers
 			$cours->setTalkTime($user_info['talk']['totalTime']);
-			$cours->setEmojis($user_info['emojis']);
+			if ($user_info['emojis'] && count($user_info['emojis']) > 0){
+				$array_emojis = $user_info['emojis'];
+				$cours->setEmojis($this->formatEmojis($array_emojis));
+			}
 			$cours->setMessageCount($user_info['totalOfMessages']);
 			$cours->setWebcamTime($this->getWebcamTime($user_info)['totalTime']);
 
@@ -345,6 +347,28 @@ class ImportDashboards extends Command
 		$io->note("Successfully imported '". $dashboard_path ."'!");
 
 		return DashCodeStatus::OK;
+	}
+
+	private function formatEmojis(?array $emojis) : ?string
+	{
+		if (!$emojis)
+			return null;
+
+		$emojis_formated = [];
+		foreach ($emojis as $emoji)
+		{
+			if (array_key_exists($emoji['name'], $emojis_formated))
+			{
+				$emojis_formated[$emoji['name']]['count'] += 1;
+				$emojis_formated[$emoji['name']]['timestamps'][] = $emoji['sentOn'];
+			}
+			else
+			{
+				$emojis_formated[$emoji['name']]['count'] = 1;
+				$emojis_formated[$emoji['name']]['timestamps'] = [$emoji['sentOn']];
+			}
+		}
+		return json_encode($emojis_formated);
 	}
 
 	// Returns the total time spent on webcams from the webcams array
