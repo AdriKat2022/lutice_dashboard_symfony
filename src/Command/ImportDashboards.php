@@ -248,6 +248,10 @@ class ImportDashboards extends Command
         $meeting->setStartTime((new \DateTime())->setTimestamp((int)($dashboard['createdOn']/1000)));
         $meeting->setEndTime((new \DateTime())->setTimestamp((int)($dashboard['endedOn']/1000)));
 
+		$start_time = $meeting->getStartTime();
+		$end_time = $meeting->getEndTime();
+		$meeting->setDuration($end_time->getTimestamp() - $start_time->getTimestamp());
+
         $this->entityManager->persist($meeting);
         $this->entityManager->flush();
 
