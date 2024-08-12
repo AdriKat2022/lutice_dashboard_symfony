@@ -31,6 +31,7 @@
                 "%02dh %02dm %02ds" | format(meeting.duration // 3600, (meeting.duration % 3600) // 60, meeting.duration % 60) }}</td>
         </table>
     </div>
+
     <div class="container my-4 p-4 border rounded bg-light" id="controls">
         <h5 class="mb-3">Choix des facteurs à prendre en compte pour la mesure d'activité :</h5>
         <div class="row g-3 align-items-center">
@@ -68,8 +69,14 @@
             </div>
         </div>
     </div>
+
+    <div class="container mt-5 mb-5 text-center">
+        <h5 class="mb-3">
+            Intervenant
+        </h5>
+        {{ meeting.event.teacher.firstName }} {{ meeting.event.teacher.lastName }}
+    </div>    
     
-    <div id="results"></div>
     <div class="container-fluid mt-5 p-5">
         <h3>Participants</h3>
         <table class="table table-hover table-bordered">
