@@ -61,8 +61,6 @@ class ImportDashboards extends Command
         $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The directory path of the JSONs location', $this->defaultDashboardDir);
 		$this->addOption('force-refresh', 'f', InputOption::VALUE_NONE, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag');
 		$this->addOption('prevent-create', 'p', InputOption::VALUE_OPTIONAL, 'Prevents the creation of new Eleves and Cours if they do not exist [all, eleve, cours, none]', 'none');
-		// By default the activity levels are not computed for all the users, as this is now an operation that will be handled by javascript
-		$this->addOption('compute-activity-lvls', 'a', InputOption::VALUE_REQUIRED, 'Choose or not to compute activity levels to save time and resources [all, nullOnly, none]', 'none');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -73,7 +71,6 @@ class ImportDashboards extends Command
         $dashboard_dir = $input->getArgument('DashboardsDirectory');
 		$ignore_ready_flag = $input->getOption('force-refresh');
 		$prevent_create = $input->getOption('prevent-create');
-		$compute_activity_levels = $input->getOption('compute-activity-lvls');
 
 		// Check the prevent-create option
 		if (!$prevent_create)
@@ -87,17 +84,6 @@ class ImportDashboards extends Command
 				"The 'prevent-create' option must be one of the following values: 'all', 'eleve', 'cours'.",
 				"You provided the value '". $prevent_create ."'",
 				"Please provide a valid value (no value provided is the same as 'all')."
-			]);
-			return Command::FAILURE;
-		}
-
-		// Check the ignore-activity-lvl option
-		if (!in_array($compute_activity_levels, ['all', 'existingOnly', 'none']))
-		{
-			$this->io->error([
-				"The 'ignore-activity-lvl' option must be one of the following values: 'all', 'existingOnly'.",
-				"You provided the value '". $compute_activity_levels ."'",
-				"Please provide a valid value (no value provided is the same as 'none')."
 			]);
 			return Command::FAILURE;
 		}
@@ -190,16 +176,11 @@ class ImportDashboards extends Command
 			$dashboard_file = $dashboard_files[0];
 
             $this->io->section("Importing dashboard " . $dashboard_file . "...");
-            $return_code = $this->importDashboardToMeeting($meeting, $prevent_create, $dashboard_file, $compute_activity_levels);
+            $return_code = $this->importDashboardToMeeting($meeting, $prevent_create, $dashboard_file);
 
 			$status_meetings[$return_code->value][] = $meeting;
 
 			if ($return_code == DashCodeStatus::OK){
-				if ($compute_activity_levels != 'none')
-					$this->computeUserActivities($meeting);
-				else
-					$this->io->note("Skipping the activity level computation for meeting (id = ". $meeting->getId() .")");
-
 				$meeting->setDashboardReady(true);
 				$this->entityManager->persist($meeting);
 				$this->entityManager->flush();
@@ -402,118 +383,6 @@ class ImportDashboards extends Command
 		return [ 'totalTime' => $total_webcam_time ] ;
     }
 
-	// This function should be used AFTER the import of the dashboard because we need all the courses to compute the max values
-	private function computeUserActivities($meeting) : void
-	{
-		$all_courses = $this->entityManager->getRepository('App\Entity\Cours')->findBy([ 'event' => $meeting->getEvent() ]);
-
-		if (!$all_courses || count($all_courses) < 1)
-		{
-			$this->io->warning([
-				"No courses found for the event '". $meeting->getEvent()->getId() ."'",
-				"Cannot compute the activity level of the users."
-			]);
-
-			return;
-		}
-
-		// Compute the activity level of the user within the meeting
-		// The activity level is calculated by the sum of 5 factors each between 0 min and 2 max:
-
-		// 1. The online time factor (compared to the total meeting time)
-		// 2. The talk time factor (compared to the most talkative user (teacher excluded))
-		// 3. The messages count factor (compared to the most messager user (teacher excluded))
-		// 4. The emojis factor (compared to the most emoji user (teacher excluded))
-		// 5. The raised hand factor (compared to the most hand-raised user (teacher excluded))
-
-		// The factors are calculated as follows:
-		// - The online time factor is the ratio of the user's online time to the total meeting time
-		// - The talk time factor is the ratio of the user's talk time to the most talkative user's talk time
-		// - The messages count factor is the ratio of the user's messages count to the most messager user's messages count
-		// - The emojis factor is the ratio of the user's emojis count to the most emoji user's emojis count
-		// - The raised hand factor is the ratio of the user's raised hand count to the most hand-raised user's raised hand count
-
-		// The factors are then multiplied by 2 to get a value between 0 and 2
-		$this->io->section("Fetching the max values for the factors...");
-
-		// Let's start by getting the max values for each factor
-		$max_online_time = 0;
-		$max_talk_time = 0;
-		$max_message_count = 0;
-		$max_emojis = 0;
-		$max_raised_hand = 0;
-
-		// Get the max values for the emojis
-		foreach ($all_courses as $user)
-		{
-			// There is for the moment no way to know if the user is a teacher or not
-			// if ($user->isTeacher())
-			// 	continue;
-
-			$max_online_time = max($max_online_time, $user->getOnlineTime());
-			$max_talk_time = max($max_talk_time, $user->getTalkTime());
-			$max_message_count = max($max_message_count, $user->getMessageCount());
-			
-			// Count the emojis by hand because the values are inside the key [emoji-name]->count
-			$emojis = $user->getEmojis();
-			$total_user_emojis = 0;
-			$total_user_hands = 0;
-			if ($emojis)
-			{
-				foreach ($emojis as $name => $emoji)
-				{
-					if ($name == 'raiseHand')
-					{
-						$total_user_hands += $emoji['count'];
-					}
-					else
-					{
-						$total_user_emojis += $emoji['count'];
-					}
-				}
-			}
-			
-			$max_emojis = max($max_emojis, $total_user_emojis);
-			$max_raised_hand = max($max_raised_hand, $total_user_hands);
-		}
-
-		$this->io->section("Computing the activity level of the users...");
-
-		// Now we can compute the factors
-		foreach ($all_courses as $user)
-		{
-			$online_time_points = $max_online_time == 0 ? 0 : 2 * $user->getOnlineTime() / $max_online_time;
-			$talk_time_points = $max_talk_time == 0 ? 0 : 2 * $user->getTalkTime() / $max_talk_time;
-			$message_count_points = $max_message_count == 0 ? 0 : 2 * $user->getMessageCount() / $max_message_count;
-			$emojis_points = 0;
-			$raised_hand_points = 0;
-
-			$total_emojis = 0;
-			$emojis = $user->getEmojis();
-			if($emojis)
-			{
-				foreach ($emojis as $name => $emoji)
-				{
-					if($name != 'raiseHand')
-					{
-						$total_emojis += $emoji['count'];
-					}
-					else
-					{
-						$raised_hand_points = $max_raised_hand == 0 ? 0 : 2 * $emoji['count'] / $max_raised_hand;
-					}
-				}
-				$emojis_points = $max_emojis == 0 ? 0 : 2 * $total_emojis / $max_emojis;
-			}
-
-			$user->setActivityLevel($online_time_points + $talk_time_points + $message_count_points + $emojis_points + $raised_hand_points);
-			$this->entityManager->persist($user);
-			$this->io->text("Saved user '". $user->getId() ."' with activity level ". $user->getActivityLevel());
-		}
-		$this->io->text("Saved all users. Flushing...");
-		$this->entityManager->flush();
-		$this->io->text("Done.");
-	}
 
 	// Returns the totalOnlineTime and the connectionCount from the intIds array
     private function getUserActivity($user_info) : array
