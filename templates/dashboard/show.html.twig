@@ -28,7 +28,7 @@
                 <td>{{ meeting.starttime | date("H:i") }}</td>
                 <td>{{ meeting.endtime | date("H:i") }}</td>
                 <td>{{ meeting.duration is empty ? "Non spécifiée" :
-                "%02dh %02dmin %02ds" | format(meeting.duration // 3600, (meeting.duration % 3600) // 60, meeting.duration % 60) }}
+                "%02dh %02dm %02ds" | format(meeting.duration // 3600, (meeting.duration % 3600) // 60, meeting.duration % 60) }}</td>
         </table>
     </div>
     <div class="container-fluid mt-5 p-5">
@@ -74,7 +74,8 @@
                                         {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
                                     {% endif %}
                                     <div class="progress">
-                                        {% set percentage = (100 * seconds_full / meeting.duration) | round %}
+                                        {% set step = 1 %}
+                                        {% set percentage = (((100/step) * seconds_full / meeting.duration) | round(0, 'common')) * step %}
                                         <div class="progress-bar" role="progressbar" style="width: {{ percentage }}%">{{ percentage }} %</div>
                                     </div>
                                 {% endif %}
