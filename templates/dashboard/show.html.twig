@@ -31,6 +31,45 @@
                 "%02dh %02dm %02ds" | format(meeting.duration // 3600, (meeting.duration % 3600) // 60, meeting.duration % 60) }}</td>
         </table>
     </div>
+    <div class="container my-4 p-4 border rounded bg-light" id="controls">
+        <h5 class="mb-3">Choix des facteurs à prendre en compte pour la mesure d'activité :</h5>
+        <div class="row g-3 align-items-center">
+            <div class="col-auto">
+                <div class="form-check">
+                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="online-time-checkbox" checked>
+                    <label class="form-check-label" for="online-time-checkbox">
+                        Le temps en ligne
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="talk-time-checkbox" checked>
+                    <label class="form-check-label" for="talk-time-checkbox">
+                        Le temps de parole
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="message-count-checkbox" checked>
+                    <label class="form-check-label" for="message-count-checkbox">
+                        Le nombre de messages
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="emojis-checkbox" checked>
+                    <label class="form-check-label" for="emojis-checkbox">
+                        Le nombre d'emojis
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="raised-hand-checkbox" checked>
+                    <label class="form-check-label" for="raised-hand-checkbox">
+                        Le nombre de mains levées
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="results"></div>
     <div class="container-fluid mt-5 p-5">
         <h3>Participants</h3>
         <table class="table table-hover table-bordered">
@@ -179,27 +218,20 @@
                                 </p>
                             {% endif %}
                         </td>
-                        <td class="flex text-center align-middle">
-                            {# Si le niveau d'activité n'est pas renseigné, on affiche une icone #}
-                            {% if cours.activityLevel is empty %}
-                                <p class="mb-0">Non calculé</p>
-                                <i class="bi bi-slash-circle-fill"></i>
-                            {% else %}
-                                <div class="d-inline-flex align-items-center">
-                                    {# On affiche le niveau d'activité avec des icones #}
-                                    {% for i in 1..10 %}
-                                        {% if cours.activityLevel >= (i-0.45) %}
-                                            <i class="bi bi-circle-fill me-1"></i>
-                                        {% else %}
-                                            <i class="bi bi-circle me-1"></i>
-                                        {% endif %}
-                                    {% endfor %}
-                                    <span class="badge rounded-full text-bg-secondary ms-1">{{ cours.activityLevel | round(1) }}</span>
-                                </div>
-                            {% endif %}
+                        <td class="flex text-center align-middle" >
+                            <div id="activity-level-{{ cours.id }}">
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    <script>
+        const courses_json_data = {{ json_courses|json_encode|raw }};
+    </script>
+    <script src="{{ asset('js/dashboard_show_scripts.js') }}"></script>
 {% endblock %}
