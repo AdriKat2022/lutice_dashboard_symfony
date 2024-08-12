@@ -57,8 +57,20 @@ class DashboardController extends AbstractController
         //     $all_emojis[$course->getId()] = $course->getEmojis();
         // }
 
+        $json_courses = array_map(function($course) {
+        return [
+            'id' => $course->getId(),
+            'onlineTime' => $course->getOnlineTime(),
+            'talkTime' => $course->getTalkTime(),
+            'webcamTime' => $course->getWebcamTime(),
+            'messageCount' => $course->getMessageCount(),
+            'emojis' => $course->getEmojis(),
+        ];
+        }, $all_courses);
+
         return $this->render("dashboard/show.html.twig",
             [
+                'json_courses' => $json_courses,
                 'meeting' => $meeting,
                 'all_courses' => $all_courses,
                 'emojis_visual_map' => [

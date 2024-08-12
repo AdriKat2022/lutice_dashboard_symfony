@@ -61,7 +61,8 @@ class ImportDashboards extends Command
         $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The directory path of the JSONs location', $this->defaultDashboardDir);
 		$this->addOption('force-refresh', 'f', InputOption::VALUE_NONE, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag');
 		$this->addOption('prevent-create', 'p', InputOption::VALUE_OPTIONAL, 'Prevents the creation of new Eleves and Cours if they do not exist [all, eleve, cours, none]', 'none');
-		$this->addOption('compute-activity-lvls', 'a', InputOption::VALUE_REQUIRED, 'Choose or not to compute activity levels to save time and resources [all, nullOnly, none]', 'all');
+		// By default the activity levels are not computed for all the users, as this is now an operation that will be handled by javascript
+		$this->addOption('compute-activity-lvls', 'a', InputOption::VALUE_REQUIRED, 'Choose or not to compute activity levels to save time and resources [all, nullOnly, none]', 'none');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
