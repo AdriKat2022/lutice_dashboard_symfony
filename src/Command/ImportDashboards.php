@@ -61,6 +61,7 @@ class ImportDashboards extends Command
         $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The directory path of the JSONs location', $this->defaultDashboardDir);
 		$this->addOption('force-refresh', 'f', InputOption::VALUE_NONE, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag');
 		$this->addOption('prevent-create', 'p', InputOption::VALUE_OPTIONAL, 'Prevents the creation of new Eleves and Cours if they do not exist [all, eleve, cours, none]', 'none');
+		$this->addOption('purge-database', 'd', InputOption::VALUE_NONE, 'Purges the database (courses) before importing the dashboards');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -71,6 +72,7 @@ class ImportDashboards extends Command
         $dashboard_dir = $input->getArgument('DashboardsDirectory');
 		$ignore_ready_flag = $input->getOption('force-refresh');
 		$prevent_create = $input->getOption('prevent-create');
+		$purge_database = $input->getOption('purge-database');
 
 		// Check the prevent-create option
 		if (!$prevent_create)
@@ -97,6 +99,16 @@ class ImportDashboards extends Command
 				"Please provide a valid directory path in the .env file or as the argument."
 			]);
 			return Command::FAILURE;
+		}
+
+		if ($purge_database)
+		{
+			$this->io->confirm("WARNING: You're about to purge the databases of all COURSES before importing the dashboards. Proceed ?", true);
+			$this->io->section("Purging the database...");
+			$this->entityManager->createQuery('DELETE FROM App\Entity\Cours')->execute();
+			// $this->entityManager->createQuery('DELETE FROM App\Entity\Eleve')->execute();
+			$this->entityManager->flush();
+			$this->io->success("Database purged.");
 		}
 
 		if ($prevent_create != 'none'){
@@ -260,6 +272,22 @@ class ImportDashboards extends Command
 
         foreach ($dashboard['users'] as $user_info)
 		{
+			// Check if this is the moderator
+			if ($user_info['isModerator']){
+				$this->io->text("Skipping moderator '". $user_info['name'] ."'...");
+				continue;
+
+				// We should check if they correpond to the teacher instead of lazily checking if they are the moderator
+
+				// Find or define the ELEVE
+				// $eleve_id = $this->getInternalBBBId($user_info['extId']);
+				// $this->io->text("Finding teacher of ID: ". $eleve_id ."...");
+				// $eleve = $this->entityManager->getRepository('App\Entity\Eleve')->findOneBy(
+				// 	[
+				// 		'id' => $eleve_id
+				// 	]);
+			}
+			
 			$this->io->section("'". $user_info['name'] ."'");
 			// Find or define the ELEVE
 			$eleve_id = $this->getInternalBBBId($user_info['extId']);
