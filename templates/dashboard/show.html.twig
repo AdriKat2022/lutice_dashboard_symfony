@@ -54,7 +54,7 @@
                     <th class="justify-content-center text-center" scope="col">Temps de partage de caméra
                         <div class="container">
                             <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="webcam-time-checkbox" checked="true">
-                            <label class="form-check-label" for="message-count-checkbox"></label>
+                            <label class="form-check-label" for="webcam-time-checkbox"></label>
                         </div></th>
                     <th class="justify-content-center text-center" scope="col">Messages
                         <div class="container">
@@ -105,8 +105,8 @@
                         <td class="flex align-middle">
                             <div class="inline-block text-center">
                                 {% if cours.onlineTime is empty or cours.onlineTime == 0 %}
-                                    <p class="mb-0">Pas de connexion</p>
-                                    <i class="bi bi-wifi"></i>
+                                    <p class="mb-0">Absent</p>
+                                    <i class="bi bi-calendar-x"></i>
                                 {% else %}
                                     {% set seconds_full = cours.onlineTime / 1000 %}
                                     {% set hours = seconds_full // 3600 %}
@@ -139,6 +139,7 @@
                                 {% set minutes = (seconds_full % 3600) // 60 %}
                                 {% set seconds = (seconds_full % 60) %}
 
+                                <i class="bi bi-mic me-1"></i>
                                 {% if hours == 0 and minutes == 0 %}
                                     &lt; 1 minute
                                 {% elseif hours == 0 %}
@@ -160,6 +161,7 @@
                                 {% set minutes = (seconds_full % 3600) // 60 %}
                                 {% set seconds = (seconds_full % 60) %}
 
+                                <i class="bi bi-camera-video me-1"></i>
                                 {% if hours == 0 and minutes == 0 %}
                                     &lt; 1 minute
                                 {% elseif hours == 0 %}
@@ -175,7 +177,8 @@
                                 <p class="mb-0">Pas de message</p>
                                 <i class="bi bi-chat-right-dots-fill"></i>
                             {% else %}
-                                {{ cours.messageCount }}
+                                <i class="bi bi-chat-right-dots me-1"></i>
+                                x {{ cours.messageCount }}
                             {% endif %}
                         </td>
                         <td class="flex text-center align-middle">
@@ -200,10 +203,8 @@
                                 <p class="mb-0">Pas de main levée</p>
                                 <i class="bi bi-person-raised-hand"></i>
                             {% else %}
-                                <p class="mb-0">
-                                    <i class="{{ emojis_visual_map.raiseHand }} me-1"></i>
-                                    x {{ cours.emojis.raiseHand.count }}
-                                </p>
+                                <i class="{{ emojis_visual_map.raiseHand }} me-1"></i>
+                                x {{ cours.emojis.raiseHand.count }}
                             {% endif %}
                         </td>
                         <td class="flex text-center align-middle" >
