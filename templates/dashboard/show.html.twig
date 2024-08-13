@@ -31,44 +31,6 @@
                 "%02dh %02dm %02ds" | format(meeting.duration // 3600, (meeting.duration % 3600) // 60, meeting.duration % 60) }}</td>
         </table>
     </div>
-
-    {# <div class="container my-4 p-4 border rounded bg-light" id="controls">
-        <h5 class="mb-3">Choix des facteurs à prendre en compte pour la mesure d'activité :</h5>
-        <div class="row g-3 align-items-center">
-            <div class="col-auto">
-                <div class="form-check">
-                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="online-time-checkbox" checked>
-                    <label class="form-check-label" for="online-time-checkbox">
-                        Le temps en ligne
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="talk-time-checkbox" checked>
-                    <label class="form-check-label" for="talk-time-checkbox">
-                        Le temps de parole
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="message-count-checkbox" checked>
-                    <label class="form-check-label" for="message-count-checkbox">
-                        Le nombre de messages
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="emojis-checkbox" checked>
-                    <label class="form-check-label" for="emojis-checkbox">
-                        Le nombre d'emojis
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input calculate-user-option-checkbox" type="checkbox" id="raised-hand-checkbox" checked>
-                    <label class="form-check-label" for="raised-hand-checkbox">
-                        Le nombre de mains levées
-                    </label>
-                </div>
-            </div>
-        </div>
-    </div> #}
     
     <div class="container-fluid mt-5 p-5">
         <h3 class="text-center">Activité</h3>
@@ -256,6 +218,7 @@
 {% endblock %}
 
 {% block javascripts %}
+    {# Loads the courses in a constant so the JS script can access it #}
     <script>
         const courses_json_data = {{ json_courses|json_encode|raw }};
     </script>
