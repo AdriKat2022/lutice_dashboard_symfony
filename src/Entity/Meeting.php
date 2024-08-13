@@ -123,6 +123,24 @@ class Meeting
     #[ORM\Column(options:['default' => 0])]
     private ?bool $dashboardReady = false;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $onlineTime = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $talkTime = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $webcamTime = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $messageCount = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $connectionCount = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?array $emojis = null;
+
     
     /**
          * Constructor
@@ -407,6 +425,78 @@ class Meeting
     public function setDashboardReady(bool $dashboardReady): static
     {
         $this->dashboardReady = $dashboardReady;
+
+        return $this;
+    }
+
+    public function getOnlineTime(): ?int
+    {
+        return $this->onlineTime;
+    }
+
+    public function setOnlineTime(?int $onlineTime): static
+    {
+        $this->onlineTime = $onlineTime;
+
+        return $this;
+    }
+
+    public function getTalkTime(): ?int
+    {
+        return $this->talkTime;
+    }
+
+    public function setTalkTime(?int $talkTime): static
+    {
+        $this->talkTime = $talkTime;
+
+        return $this;
+    }
+
+    public function getWebcamTime(): ?int
+    {
+        return $this->webcamTime;
+    }
+
+    public function setWebcamTime(?int $webcamTime): static
+    {
+        $this->webcamTime = $webcamTime;
+
+        return $this;
+    }
+
+    public function getMessageCount(): ?int
+    {
+        return $this->messageCount;
+    }
+
+    public function setMessageCount(?int $messageCount): static
+    {
+        $this->messageCount = $messageCount;
+
+        return $this;
+    }
+
+    public function getConnectionCount(): ?int
+    {
+        return $this->connectionCount;
+    }
+
+    public function setConnectionCount(?int $connectionCount): static
+    {
+        $this->connectionCount = $connectionCount;
+
+        return $this;
+    }
+
+    public function getEmojis(): ?array
+    {
+        return $this->emojis;
+    }
+
+    public function setEmojis(?array $emojis): static
+    {
+        $this->emojis = $emojis;
 
         return $this;
     }

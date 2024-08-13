@@ -288,13 +288,30 @@ class ImportDashboards extends Command
 			if ($user_info['isModerator']){
 				// Check if moderator is the main teacher
 				// If yes, put it in the MEETING table
-				$teacher = $event->getTeacher();
-				if ($this->getInternalBBBId($user_info['extId']) == $teacher->getId()){
+				$main_teacher = $event->getTeacher();
+				$teacher_id = $this->getInternalBBBId($user_info['extId']);
+				if ($teacher_id == $main_teacher->getId()){
 					$this->io->text("Found main teacher '". $user_info['name'] ."'...");
-					// Save infos in the MEETING entry
 
+					// Save infos in the MEETING entry
+					$meeting->setTalkTime($user_info['talk']['totalTime']);
+					if ($user_info['emojis'] && count($user_info['emojis']) > 0){
+						$array_emojis = $user_info['emojis'];
+						$meeting->setEmojis($this->formatEmojis($array_emojis));
+					}
+					$meeting->setMessageCount($user_info['totalOfMessages']);
+					$meeting->setWebcamTime($this->getWebcamTime($user_info)['totalTime']);
+		
+					$user_activity = $this->getUserActivity($user_info);
+					$meeting->setStartTime((new \DateTime())->setTimestamp((int)$user_activity['firstConnected']/1000));
+					$meeting->setEndTime((new \DateTime())->setTimestamp((int)$user_activity['lastLeft']/1000));
+					$meeting->setOnlineTime($user_activity['totalOnlineTime']);
+					$meeting->setConnectionCount($user_activity['connectionCount']);
+		
+					$this->entityManager->persist($meeting);
 					$this->entityManager->persist($event);
 					$this->entityManager->flush();
+					$this->io->newLine();
 					$this->io->text("Saved main teacher '". $user_info['name'] ."'");
 					continue;
 				}
