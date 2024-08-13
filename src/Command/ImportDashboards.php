@@ -285,15 +285,30 @@ class ImportDashboards extends Command
 
         foreach ($dashboard['users'] as $user_info)
 		{
-			// Check if this is the moderator
 			if ($user_info['isModerator']){
-				$this->io->text("Skipping moderator '". $user_info['name'] ."'...");
-				continue;
-
 				// Check if moderator is the main teacher
 				// If yes, put it in the MEETING table
+				$teacher = $event->getTeacher();
+				if ($this->getInternalBBBId($user_info['extId']) == $teacher->getId()){
+					$this->io->text("Found main teacher '". $user_info['name'] ."'...");
+					// Save infos in the MEETING entry
 
-				// Otherwise, put it in the event_teacher table
+					$this->entityManager->persist($event);
+					$this->entityManager->flush();
+					$this->io->text("Saved main teacher '". $user_info['name'] ."'");
+					continue;
+				}
+				else {
+					// Skip for now
+					$this->io->text("Skipping secondary teacher '". $user_info['name'] ."'...");
+					continue;
+				}
+
+
+
+				// If no, put it in the EVENT_TEACHER table
+
+
 			}
 			
 			$this->io->section("'". $user_info['name'] ."'");
