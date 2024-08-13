@@ -142,8 +142,9 @@
                         </td>
                         <td class="flex align-middle">
                             <div class="inline-block text-center">
-                                {% if cours.onlineTime is empty %}
-                                    Non spécifié
+                                {% if cours.onlineTime is empty or cours.onlineTime == 0 %}
+                                    <p class="mb-0">Pas de connexion</p>
+                                    <i class="bi bi-wifi"></i>
                                 {% else %}
                                     {% set seconds_full = cours.onlineTime / 1000 %}
                                     {% set hours = seconds_full // 3600 %}
@@ -235,7 +236,7 @@
                             {# Si il n'y a pas d'émoji ou que raiseHand n'est pas défini, alors on affiche une icone #}
                             {% if cours.emojis is empty or not cours.emojis.raiseHand is defined %}
                                 <p class="mb-0">Pas de main levée</p>
-                                <i class="bi bi-emoji-frown-fill"></i>
+                                <i class="bi bi-person-raised-hand"></i>
                             {% else %}
                                 <p class="mb-0">
                                     <i class="{{ emojis_visual_map.raiseHand }} me-1"></i>
