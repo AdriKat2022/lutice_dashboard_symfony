@@ -107,18 +107,24 @@ class ImportDashboards extends Command
 			
 			if ($is_debug)
 			{
-				$this->io->confirm("WARNING: You're about to purge the databases of all COURSES before importing the dashboards. Proceed ?", true);
-				$this->io->section("Purging the database...");
-				$this->entityManager->createQuery('DELETE FROM App\Entity\Cours')->execute();
-				// $this->entityManager->createQuery('DELETE FROM App\Entity\Eleve')->execute();
-				$this->entityManager->flush();
-				$this->io->success("Database purged.");
+				$confirm = $this->io->confirm("WARNING: You're about to purge the databases of all COURSES before importing the dashboards. Proceed ?", true);
+
+				if ($confirm){
+					$this->io->section("Purging the database...");
+					$this->entityManager->createQuery('DELETE FROM App\Entity\Cours')->execute();
+					// $this->entityManager->createQuery('DELETE FROM App\Entity\Eleve')->execute();
+					$this->entityManager->flush();
+					$this->io->success("Database purged.");
+				}
+				else {
+					$this->io->warning("Database purge aborted by user.");
+				}
 			}
 			else
 			{
 				$this->io->error([
 					"Cannot purge the database in production mode.",
-					"Please set the 'purge-database' option to FALSE."
+					"Please remove the 'purge-database' option, or use '--env=dev' to force it."
 				]);
 				return Command::FAILURE;
 			}
