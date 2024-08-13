@@ -82,4 +82,97 @@ class DashboardController extends AbstractController
                 ],
             ]);
     }
+
+    // public function exportUsers() {
+
+    //     $users = $this->em->getRepository(User::class)->getUsers();
+        
+    //     $encoders = [new CsvEncoder()];
+    //     $normalizers = [new ObjectNormalizer()];
+    //     $serializer = new Serializer($normalizers, $encoders);
+    //     $csvContent = $serializer->serialize($users, 'csv', ['csv_delimiter'=>';']);
+        
+    //     $response = new Response($csvContent);
+    //     $response->headers->set('Content-Encoding', 'UTF-8');
+    //     $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
+    //     $response->headers->set('Content-Disposition', 'attachment; filename=users.csv');
+        
+    //     return $response;
+    // }
+
+    // #[Route('/admin/export', name : 'export_presences', methods: ['POST'], options: ['expose' => true])]
+
+    // public function userExport(CsrfTokenManagerInterface $csrfTokenManager, Request $request) : Response
+    // {
+
+    // $user = $this->getUser();
+    // $token = new CsrfToken('export_presences', $request->request->get('token'));
+
+    // if (!$csrfTokenManager->isTokenValid($token) || !$user) {
+    // return $this->json ([
+    // 'code' => 403,
+    // 'message' => 'Unauthorized'
+    // ], 403);
+    // //throw new InvalidCsrfTokenException('Le Token n\'est pas valide.');
+    // }
+
+
+    // $typeExport = $request->request->get('typeexport');
+
+    // $filter = $request->request->get('filter');
+
+    // if(empty($filter)){
+    // switch ($typeExport) {
+    // case 'eleves':
+    // $filter = $this->em->getRepository(Eleve::class)->findAll();
+    // break;
+    // case 'teachers':
+    // $filter = $this->em->getRepository(Teacher::class)->findAll();
+    // break;
+    // case 'groupes':
+    // $filter = $this->em->getRepository(Groupe::class)->findAll();
+    // break;
+    // }
+
+    // }
+
+    // $dateStart = date_create($request->request->get('start'))->setTime(00, 00, 00);
+    // $dateEnd = date_create($request->request->get('end'))->setTime(23, 59, 59);
+
+    // $encoders = [new CsvEncoder()];
+    // $normalizers = [new DateTimeNormalizer(['datetime_format'=>'d/m/Y H:i:s','datetime_timezone'=>'Europe/Paris']), new ObjectNormalizer()];
+    // $serializer = new Serializer($normalizers, $encoders);
+    // $csvContent = implode(';',[
+    // 'du ',
+    // $dateStart->format('d-m-Y'),
+    // 'au',
+    // $dateEnd->format('d-m-Y'),
+    // ]).chr(10);
+
+    // switch ($typeExport) {
+    // case 'eleves':
+    // $presences = $this->em->getRepository(Cours::class)->getPresencesEleves($filter, $dateStart, $dateEnd);
+    // break;
+    // case 'teachers':
+    // $presences = $this->em->getRepository(Event::class)->getPresencesTeachers($filter, $dateStart, $dateEnd );
+    // break;
+    // case 'groupes':
+    // $presences = $this->em->getRepository(Groupe::class)->getPresencesGroupes($filter, $dateStart, $dateEnd );
+    // break;
+    // }
+
+    // $csvContent .= $serializer->serialize($presences, 'csv', [
+    // 'csv_delimiter'=>';',
+    // 'circular_reference_handler' => function ($object) {
+    // return $object->getId();
+    // }
+    // ]);
+
+    // $response = new Response($csvContent);
+    // $response->headers->set('Content-Encoding', 'UTF-8');
+    // $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
+    // $response->headers->set('Content-Disposition', 'attachment; filename=presences-'.$dateStart->format('d-m-Y').'_'.$dateEnd->format('d-m-Y').'.csv');
+
+    // return $response;
+    // }
 }

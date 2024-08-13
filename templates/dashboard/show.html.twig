@@ -69,20 +69,13 @@
             </div>
         </div>
     </div> #}
-
-    <div class="container mt-5 mb-5 text-center">
-        <h5 class="mb-3">
-            Intervenant
-        </h5>
-        {{ meeting.event.teacher.firstName }} {{ meeting.event.teacher.lastName }}
-    </div>    
     
     <div class="container-fluid mt-5 p-5">
-        <h3>Participants</h3>
-        <table class="table table-hover table-bordered">
+        <h3 class="text-center">Activité</h3>
+        <table class="table table-hover table-bordered mt-5">
             <thead class="">
                 <tr>
-                    <th scope="justify-content-center text-center" scope="col">Utilisateur
+                    <th class="justify-content-center text-center" scope="col">Utilisateur
                         <div class="container text-center">
                             <small class="text-muted">Inclure dans l'activité</small>
                         </div></th>
@@ -126,7 +119,7 @@
                     <td class="flex">
                         <div class="row">
                             <div class="inline-block col-sm">
-                                {{ "#{meeting.event.teacher.firstName} #{meeting.event.teacher.lastName}" }}
+                                {{ meeting.event.teacher }}
                                 <p class="text-xs text-muted mb-0 mt-2"><i class="bi bi-arrow-right-square me-2"></i>{{ meeting.starttime | date("H:i") }}</p>
                                 <p class="text-xs text-muted mb-0"><i class="bi bi-arrow-left-square me-2"></i>{{ meeting.endtime | date("H:i") }}</p>
                             </div>
@@ -142,7 +135,7 @@
                     <tr>
                         <td class="flex">
                             <div class="inline-block">
-                                {{ "#{cours.eleve.firstName} #{cours.eleve.lastname}" }}
+                                {{ cours.eleve }}
                                 <p class="text-xs text-muted mb-0 mt-2"><i class="bi bi-arrow-right-square me-2"></i>{{ cours.starttime | date("H:i") }}</p>
                                 <p class="text-xs text-muted mb-0"><i class="bi bi-arrow-left-square me-2"></i>{{ cours.endtime | date("H:i") }}</p>
                             </div>

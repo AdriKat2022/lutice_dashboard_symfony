@@ -61,7 +61,7 @@ class ImportDashboards extends Command
         $this->addArgument('DashboardsDirectory', InputArgument::OPTIONAL, 'The directory path of the JSONs location', $this->defaultDashboardDir);
 		$this->addOption('force-refresh', 'f', InputOption::VALUE_NONE, 'Forces all dashboards to be re-imported by ignoring the dashboardReady flag');
 		$this->addOption('prevent-create', 'p', InputOption::VALUE_OPTIONAL, 'Prevents the creation of new Eleves and Cours if they do not exist [all, eleve, cours, none]', 'none');
-		$this->addOption('purge-database', 'd', InputOption::VALUE_NONE, 'Purges the database (courses) before importing the dashboards');
+		$this->addOption('purge-database', 'd', InputOption::VALUE_NONE, '[DEBUG] Purges the database (courses) before importing the dashboards');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -103,12 +103,25 @@ class ImportDashboards extends Command
 
 		if ($purge_database)
 		{
-			$this->io->confirm("WARNING: You're about to purge the databases of all COURSES before importing the dashboards. Proceed ?", true);
-			$this->io->section("Purging the database...");
-			$this->entityManager->createQuery('DELETE FROM App\Entity\Cours')->execute();
-			// $this->entityManager->createQuery('DELETE FROM App\Entity\Eleve')->execute();
-			$this->entityManager->flush();
-			$this->io->success("Database purged.");
+			$is_debug = getenv('APP_ENV') == 'dev';
+			
+			if ($is_debug)
+			{
+				$this->io->confirm("WARNING: You're about to purge the databases of all COURSES before importing the dashboards. Proceed ?", true);
+				$this->io->section("Purging the database...");
+				$this->entityManager->createQuery('DELETE FROM App\Entity\Cours')->execute();
+				// $this->entityManager->createQuery('DELETE FROM App\Entity\Eleve')->execute();
+				$this->entityManager->flush();
+				$this->io->success("Database purged.");
+			}
+			else
+			{
+				$this->io->error([
+					"Cannot purge the database in production mode.",
+					"Please set the 'purge-database' option to FALSE."
+				]);
+				return Command::FAILURE;
+			}
 		}
 
 		if ($prevent_create != 'none'){
@@ -277,15 +290,10 @@ class ImportDashboards extends Command
 				$this->io->text("Skipping moderator '". $user_info['name'] ."'...");
 				continue;
 
-				// We should check if they correpond to the teacher instead of lazily checking if they are the moderator
+				// Check if moderator is the main teacher
+				// If yes, put it in the MEETING table
 
-				// Find or define the ELEVE
-				// $eleve_id = $this->getInternalBBBId($user_info['extId']);
-				// $this->io->text("Finding teacher of ID: ". $eleve_id ."...");
-				// $eleve = $this->entityManager->getRepository('App\Entity\Eleve')->findOneBy(
-				// 	[
-				// 		'id' => $eleve_id
-				// 	]);
+				// Otherwise, put it in the event_teacher table
 			}
 			
 			$this->io->section("'". $user_info['name'] ."'");
