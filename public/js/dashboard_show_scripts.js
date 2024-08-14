@@ -18,6 +18,7 @@ function computeUserActivities() {
     // Get max values
     let maxOnlineTime = 0;
     let maxTalkTime = 0;
+    let maxWebcamTime = 0;
     let maxMessageCount = 0;
     let maxEmojis = 0;
     let maxRaisedHand = 0;
@@ -26,6 +27,7 @@ function computeUserActivities() {
         // alert(user);
         maxOnlineTime = Math.max(maxOnlineTime, user.onlineTime);
         maxTalkTime = Math.max(maxTalkTime, user.talkTime);
+        maxWebcamTime = Math.max(maxWebcamTime, user.webcamTime);
         maxMessageCount = Math.max(maxMessageCount, user.messageCount);
 
         let userEmojis = 0;
@@ -47,6 +49,7 @@ function computeUserActivities() {
     courses_json_data.forEach(user => {
         let onlineTimePoints = maxOnlineTime === 0 ? 0 : 2 * user.onlineTime / maxOnlineTime;
         let talkTimePoints = maxTalkTime === 0 ? 0 : 2 * user.talkTime / maxTalkTime;
+        let webcamTimePoints = maxWebcamTime === 0 ? 0 : 2 * user.webcamTime / maxWebcamTime;
         let messageCountPoints = maxMessageCount === 0 ? 0 : 2 * user.messageCount / maxMessageCount;
         let emojisPoints = 0;
         let raisedHandPoints = 0;
@@ -69,6 +72,7 @@ function computeUserActivities() {
         let total_factors = 0;
         const onlineTimeCheckbox = document.getElementById('online-time-checkbox');
         const talkTimeCheckbox = document.getElementById('talk-time-checkbox');
+        const webcamTimeCheckbox = document.getElementById('webcam-time-checkbox');
         const messageCountCheckbox = document.getElementById('message-count-checkbox');
         const emojisCheckbox = document.getElementById('emojis-checkbox');
         const raisedHandCheckbox = document.getElementById('raised-hand-checkbox');
@@ -79,6 +83,10 @@ function computeUserActivities() {
         }
         if (talkTimeCheckbox.checked) {
             activityLevel += talkTimePoints;
+            total_factors += 1;
+        }
+        if (webcamTimeCheckbox.checked) {
+            activityLevel += webcamTimePoints;
             total_factors += 1;
         }
         if (messageCountCheckbox.checked) {
