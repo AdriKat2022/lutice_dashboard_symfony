@@ -75,23 +75,22 @@
                 </tr>
             </thead>
             <tbody class="table-group-divider">
-                {# Add the teacher #}
+                {# Add the teacher(s) #}
 
                 <tr>
                     <td class="flex">
-                        <div class="row">
-                            <div class="inline-block col-sm">
+                        <div class="d-flex align-item-left col-sm">
+                            <div class="me-3">
+                                <i class="bi bi-person-circle me-2"></i>
                                 {{ meeting.event.teacher }}
-                                <p class="text-xs text-muted mb-0 mt-2"><i class="bi bi-arrow-right-square me-2"></i>{{ meeting.starttime | date("H:i") }}</p>
-                                <p class="text-xs text-muted mb-0"><i class="bi bi-arrow-left-square me-2"></i>{{ meeting.endtime | date("H:i") }}</p>
                             </div>
-                            <div class="col-sm justify-content-center">
-                                {# <img src="{{ meeting.event.teacher.avatar }}" alt="Avatar de l'intervenant" class="rounded-circle" width="50" height="50"> #}
-                                <small class="text-muted text-uppercase">Intervenant</small>
-                            </div>
+                            <small class="text-muted text-uppercase">Intervenant</small>
+                        </div>
+                        <div class="inline-block justify-content-center">
+                            <p class="text-xs text-muted mb-0 mt-2"><i class="bi bi-arrow-right-square me-2"></i>{{ meeting.starttime | date("H:i") }}</p>
+                            <p class="text-xs text-muted mb-0"><i class="bi bi-arrow-left-square me-2"></i>{{ meeting.endtime | date("H:i") }}</p>
                         </div>
                     </td>
-                    {# TODO: Add more properties #}
                 </tr>
                 {% for cours in all_courses %}
                     <tr>
