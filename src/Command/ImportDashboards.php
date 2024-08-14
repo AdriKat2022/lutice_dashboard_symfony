@@ -146,16 +146,16 @@ class ImportDashboards extends Command
 		if (count($meetings) == 0)
 		{
 			if ($ignore_ready_flag)
-				$this->io->info("There are no meeting in the database.");
+				$this->io->block("There are no meeting in the database.", 'INFO', 'fg=white;bg=blue', ' ', true);
 			else
-				$this->io->info("All meetings are already up to date.");
+				$this->io->block("All meetings are already up to date.", 'INFO', 'fg=white;bg=blue', ' ', true);
 			return Command::SUCCESS;
 		}
 
 		if ($ignore_ready_flag)
-			$this->io->info('Found ' . count($meetings) . ' meetings.');
+			$this->io->block('Found ' . count($meetings) . ' meetings.', 'INFO', 'fg=white;bg=blue', ' ', true);
 		else
-			$this->io->info('Found ' . count($meetings) . ' meetings waiting to be updated.');
+			$this->io->block('Found ' . count($meetings) . ' meetings waiting to be updated.', 'INFO', 'fg=white;bg=blue', ' ', true);
 		
 		
 		$result = $this->io->confirm("Do you want to update these meetings?", true);
@@ -291,7 +291,7 @@ class ImportDashboards extends Command
 				$main_teacher = $event->getTeacher();
 				$teacher_id = $this->getInternalBBBId($user_info['extId']);
 				if ($teacher_id == $main_teacher->getId()){
-					$this->io->text("Found main teacher '". $user_info['name'] ."'...");
+					$this->io->section("'" . $user_info['name'] ."' (MAIN TEACHER)");
 
 					// Save infos in the MEETING entry
 					$meeting->setTalkTime($user_info['talk']['totalTime']);
@@ -317,15 +317,11 @@ class ImportDashboards extends Command
 				}
 				else {
 					// Skip for now
-					$this->io->text("Skipping secondary teacher '". $user_info['name'] ."'...");
+					$this->io->section("'" . $user_info['name'] ."' (SECONDARY TEACHER) [SKIPPED]");
+					$this->io->text("This teacher is not the main teacher of the event :");
+					$this->io->text("Their ID is ". $teacher_id ." and the main teacher's ID is ". $main_teacher->getId() .".");
 					continue;
 				}
-
-
-
-				// If no, put it in the EVENT_TEACHER table
-
-
 			}
 			
 			$this->io->section("'". $user_info['name'] ."'");
