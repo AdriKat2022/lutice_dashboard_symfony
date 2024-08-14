@@ -76,7 +76,6 @@
             </thead>
             <tbody class="table-group-divider">
                 {# Add the teacher(s) #}
-
                 <tr>
                     <td class="flex">
                         <div class="d-flex align-item-left col-sm">
@@ -91,11 +90,123 @@
                             <p class="text-xs text-muted mb-0"><i class="bi bi-arrow-left-square me-2"></i>{{ meeting.endtime | date("H:i") }}</p>
                         </div>
                     </td>
+                    <td class="flex align-middle">
+                        <div class="inline-block text-center">
+                            {% if meeting.onlineTime is empty or meeting.onlineTime == 0 %}
+                                <p class="mb-0">Absent</p>
+                                <i class="bi bi-calendar-x"></i>
+                            {% else %}
+                                {% set seconds_full = meeting.onlineTime / 1000 %}
+                                {% set hours = seconds_full // 3600 %}
+                                {% set minutes = (seconds_full % 3600) // 60 %}
+                                {% set seconds = (seconds_full % 60) %}
+
+                                {% if hours == 0 and minutes == 0 %}
+                                    Moins d'une minute
+                                {% elseif hours == 0 %}
+                                    {{ minutes }} minute(s)
+                                {% else %}
+                                    {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
+                                {% endif %}
+                                <div class="progress">
+                                    {% set step = 1 %}
+                                    {% set percentage = (((100/step) * seconds_full / meeting.duration) | round(0, 'common')) * step %}
+                                    <div class="progress-bar" role="progressbar" style="width: {{ percentage }}%">{{ percentage }} %</div>
+                                </div>
+                            {% endif %}
+                    </td>
+                    <td class="flex text-center align-middle">
+                        {% if meeting.talkTime is empty %}
+                            Non spécifié
+                        {% elseif meeting.talkTime == 0 %}
+                            <p class="mb-0">Pas de parole</p>
+                            <i class="bi bi-mic-mute-fill"></i>
+                        {% else %}
+                            {% set seconds_full = meeting.talkTime / 1000 %}
+                            {% set hours = seconds_full // 3600 %}
+                            {% set minutes = (seconds_full % 3600) // 60 %}
+                            {% set seconds = (seconds_full % 60) %}
+
+                            <i class="bi bi-mic me-1"></i>
+                            {% if hours == 0 and minutes == 0 %}
+                                &lt; 1 minute
+                            {% elseif hours == 0 %}
+                                {{ minutes }} minute(s)
+                            {% else %}
+                                {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="flex text-center align-middle">
+                        {% if meeting.webcamTime is empty %}
+                            Non spécifié
+                        {% elseif meeting.webcamTime == 0 %}
+                            <p class="mb-0">Pas de caméra</p>
+                            <i class="bi bi-camera-video-off-fill"></i>
+                        {% else %}
+                            {% set seconds_full = meeting.webcamTime / 1000 %}
+                            {% set hours = seconds_full // 3600 %}
+                            {% set minutes = (seconds_full % 3600) // 60 %}
+                            {% set seconds = (seconds_full % 60) %}
+
+                            <i class="bi bi-camera-video me-1"></i>
+                            {% if hours == 0 and minutes == 0 %}
+                                &lt; 1 minute
+                            {% elseif hours == 0 %}
+                                {{ minutes }} minute(s)
+                            {% else %}
+                                {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="flex text-center align-middle">
+                        {# Si le nombre de message est null ou = 0, alors on affiche une icone #}
+                        {% if meeting.messageCount is empty or meeting.messageCount == 0 %}
+                            <p class="mb-0">Pas de message</p>
+                            <i class="bi bi-chat-right-dots-fill"></i>
+                        {% else %}
+                            <i class="bi bi-chat-right-dots me-1"></i>
+                            x {{ meeting.messageCount }}
+                        {% endif %}
+                    </td>
+                    <td class="flex text-center align-middle">
+                        {# Si le nombre d'emoji est null ou = 0, alors on affiche une icone #}
+                        {% if meeting.emojis is empty or (meeting.emojis | length) < 1 or (((meeting.emojis | length) == 1) and meeting.emojis.raiseHand is defined) %}
+                            <p class="mb-0">Pas de réaction</p>
+                            <i class="bi bi-emoji-frown-fill"></i>
+                        {% else %}
+                            {% for name, emoji in meeting.emojis %}
+                                {% if name != "raiseHand" %}
+                                    <p class="mb-0">
+                                        <i class="{{ emojis_visual_map[name] }} me-1"></i>
+                                        x {{ emoji.count }}
+                                    </p>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td class="flex text-center align-middle">
+                        {# Si il n'y a pas d'émoji ou que raiseHand n'est pas défini, alors on affiche une icone #}
+                        {% if meeting.emojis is empty or not meeting.emojis.raiseHand is defined %}
+                            <p class="mb-0">Pas de main levée</p>
+                            <i class="bi bi-person-raised-hand"></i>
+                        {% else %}
+                            <i class="{{ emojis_visual_map.raiseHand }} me-1"></i>
+                            x {{ meeting.emojis.raiseHand.count }}
+                        {% endif %}
+                    </td>
+                    <td class="flex text-center align-middle" >
+                        <div id="activity-level-{{ meeting.id }}">
+                            <span class="badge rounded-full text-bg-secondary ms-1">Non calculé pour le professeur</span>
+                        </div>
+                    </td>
                 </tr>
+
                 {% for cours in all_courses %}
                     <tr>
                         <td class="flex">
                             <div class="inline-block">
+                                <i class="bi bi-person-check me-2"></i>
                                 {{ cours.eleve }}
                                 <p class="text-xs text-muted mb-0 mt-2"><i class="bi bi-arrow-right-square me-2"></i>{{ cours.starttime | date("H:i") }}</p>
                                 <p class="text-xs text-muted mb-0"><i class="bi bi-arrow-left-square me-2"></i>{{ cours.endtime | date("H:i") }}</p>
