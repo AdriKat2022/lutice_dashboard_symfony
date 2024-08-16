@@ -255,8 +255,8 @@ class Teacher
      */
     private $publicpricing;
 
-//     #[ORM\ManyToMany(targetEntity: Event::class, mappedBy: 'comoderator')]
-//     private $coevent;
+    #[ORM\OneToMany(targetEntity: EventTeacher::class, mappedBy: 'teacher')]
+    private $coevent;
 
     #[ORM\Column(nullable: true)]
     private ?int $externalId = null; 

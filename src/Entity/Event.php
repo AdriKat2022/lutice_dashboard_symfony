@@ -217,7 +217,7 @@ class Event
     
     private $filesUsed;
 
-    #[ORM\ManyToMany(targetEntity: Teacher::class, inversedBy: 'coevent')]
+    #[ORM\OneToMany(targetEntity: Teacher::class, mappedBy: 'event')]
     private $comoderator;
 
 //     #[ORM\OneToMany(targetEntity: Share::class, mappedBy: 'event')]
