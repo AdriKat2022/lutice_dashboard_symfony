@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\EventTeacherRepository;
+use DateTime;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Table(name: 'event_teacher')]
@@ -20,6 +21,12 @@ class EventTeacher
     #[ORM\ManyToOne(targetEntity: Teacher::class, inversedBy: 'coevent')]
     private $teacher; 
     
+    #[ORM\Column(nullable: true)]
+    private ?DateTime $starttime = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?DateTime $endtime = null;
+
     #[ORM\Column(nullable: true)]
     private ?int $onlineTime = null;
 
@@ -67,6 +74,31 @@ class EventTeacher
     {
         $this->teacher = $teacher;
         $teacher->addCoevent($this);
+
+        return $this;
+    }
+
+
+    public function getStartTime(): ?DateTime
+    {
+        return $this->starttime;
+    }
+
+    public function setStartTime(?DateTime $starttime): self
+    {
+        $this->starttime = $starttime;
+
+        return $this;
+    }
+
+    public function getEndTime(): ?DateTime
+    {
+        return $this->endtime;
+    }
+
+    public function setEndTime(?DateTime $endtime): self
+    {
+        $this->endtime = $endtime;
 
         return $this;
     }
