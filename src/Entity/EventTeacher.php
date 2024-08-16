@@ -19,4 +19,22 @@ class EventTeacher
     #[ORM\JoinColumn(name: 'teacher_id', referencedColumnName: 'id', nullable: false)]
     #[ORM\ManyToOne(targetEntity: Teacher::class, inversedBy: 'coevent')]
     private $teacher; 
+    
+    #[ORM\Column(nullable: true)]
+    private ?int $onlineTime = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $talkTime = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $webcamTime = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $messageCount = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $connectionCount = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?array $emojis = null;
 }
