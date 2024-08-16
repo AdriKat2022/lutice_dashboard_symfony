@@ -11,6 +11,8 @@ use Doctrine\ORM\EntityManagerInterface;
 
 use App\Entity\Cours;
 use App\Entity\Eleve;
+use App\Entity\EventTeacher;
+use App\Entity\Teacher;
 
 enum DashCodeStatus : string {
 	case OK = "OK";
@@ -322,10 +324,74 @@ class ImportDashboards extends Command
 					continue;
 				}
 				else {
-					// Skip for now
-					$this->io->section("'" . $user_info['name'] ."' (SECONDARY TEACHER) [SKIPPED]");
+					$this->io->section("'" . $user_info['name'] ."' (SECONDARY TEACHER)");
 					$this->io->text("This teacher is not the main teacher of the event :");
 					$this->io->text("Their ID is ". $teacher_id ." and the main teacher's ID is ". $main_teacher->getId() .".");
+					$this->io->newLine();
+					$this->io->text("Finding teacher of ID: ". $teacher_id ."...");
+					$teacher = $this->entityManager->getRepository('App\Entity\Teacher')->findOneBy(
+						[
+							'id' => $teacher_id
+						]);
+						
+					if (!$teacher)
+					{
+						$this->io->caution([
+							"No teacher found for '". $teacher_id ."'.",
+							"Please create a teacher with this ID before importing the dashboard.",
+							"Skipping this teacher."
+						]);
+						
+						continue;
+					}
+						
+					$this->io->text("Found teacher '". $teacher->getFirstName() . " " . $teacher->getLastName() ."'");
+
+					// Let's now save the secondary teacher in the event_teacher table (let's check if it exists first)
+					$event_teacher = $this->entityManager->getRepository('App\Entity\EventTeacher')->findOneBy(
+						[
+							'event' => $event,
+							'teacher' => $teacher_id
+						]);
+
+					if (!$event_teacher)
+					{
+						$event_teacher = new EventTeacher();
+						$event_teacher->setEvent($event);
+						$event_teacher->setTeacher($teacher);
+						$this->entityManager->persist($event);
+						$this->entityManager->persist($teacher);
+						$this->entityManager->persist($event_teacher);
+						$this->entityManager->flush();
+						$this->io->warning([
+							"No event_teacher found for event '". $event->getId() ."' and teacher '". $teacher_id ."'. Created one.",
+							"Saved event_teacher (event_id = ". $event->getId() .", teacher_id = ". $teacher_id .") '". $event_teacher ."'",
+							"Linked teacher '". $teacher_id ."' and event '". $event->getId() ."' to this event_teacher entry."
+						]);
+					}
+
+					$this->io->text("Found event_teacher '". $event_teacher ."'");
+
+					// Save infos in the event_teacher entry
+					$event_teacher->setTalkTime($user_info['talk']['totalTime']);
+					if ($user_info['emojis'] && count($user_info['emojis']) > 0){
+						$array_emojis = $user_info['emojis'];
+						$event_teacher->setEmojis($this->formatEmojis($array_emojis));
+					}
+					$event_teacher->setMessageCount($user_info['totalOfMessages']);
+					$event_teacher->setWebcamTime($this->getWebcamTime($user_info)['totalTime']);
+		
+					$user_activity = $this->getUserActivity($user_info);
+					$event_teacher->setStartTime((new \DateTime())->setTimestamp((int)$user_activity['firstConnected']/1000));
+					$event_teacher->setEndTime((new \DateTime())->setTimestamp((int)$user_activity['lastLeft']/1000));
+					$event_teacher->setOnlineTime($user_activity['totalOnlineTime']);
+					$event_teacher->setConnectionCount($user_activity['connectionCount']);
+
+					$this->io->text("Saving and flushing event_teacher...");
+
+					$this->entityManager->persist($event_teacher);
+					$this->entityManager->flush();
+
 					continue;
 				}
 			}
@@ -491,13 +557,21 @@ class ImportDashboards extends Command
 	// 	return array();
 	// }
 
-	private function getInternalBBBId(string $externalId) : int
+	private function getInternalBBBId(string $externalId) : ?int
 	{
         $data = explode('_', $externalId);
         $id = base64_decode($data[0]);
-        if($data[1] === hash('adler32', $id)) {
+		$id_hash = hash('adler32', $id);
+
+        if($data[1] === $id_hash) {
             return $id;
         }
+
+		$this->io->caution([
+			"The external ID '". $externalId ."' is not valid.",
+			$id . " hashed (". $id_hash .") doesn't match with '". $data[1] ."'",
+	]);
+		exit(1);
         
         return null;
     }

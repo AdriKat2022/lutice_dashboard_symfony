@@ -217,7 +217,7 @@ class Event
     
     private $filesUsed;
 
-    #[ORM\ManyToMany(targetEntity: Teacher::class, inversedBy: 'coevent')]
+    #[ORM\OneToMany(targetEntity: EventTeacher::class, mappedBy: 'event')]
     private $comoderator;
 
 //     #[ORM\OneToMany(targetEntity: Share::class, mappedBy: 'event')]
@@ -938,14 +938,14 @@ class Event
     }
 
     /**
-     * @return Collection|Teacher[]
+     * @return Collection|EventTeacher[]
      */
     public function getComoderator(): Collection
     {
         return $this->comoderator;
     }
 
-    public function addComoderator(Teacher $comoderator): self
+    public function addComoderator(EventTeacher $comoderator): self
     {
         if (!$this->comoderator->contains($comoderator)) {
             $this->comoderator[] = $comoderator;
@@ -954,7 +954,7 @@ class Event
         return $this;
     }
 
-    public function removeComoderator(Teacher $comoderator): self
+    public function removeComoderator(EventTeacher $comoderator): self
     {
         $this->comoderator->removeElement($comoderator);
 

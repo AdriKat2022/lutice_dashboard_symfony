@@ -75,7 +75,7 @@
                 </tr>
             </thead>
             <tbody class="table-group-divider">
-                {# Add the teacher(s) #}
+                {# Add the main teacher(s) #}
                 <tr>
                     <td class="flex">
                         <div class="d-flex align-item-left col-sm">
@@ -201,6 +201,134 @@
                         </div>
                     </td>
                 </tr>
+                {# Add the secondary teachers #}
+                {% for event_teacher in all_secondary_teachers %}
+                    <tr>
+                        <td class="flex">
+                            <div class="d-flex align-item-left col-sm">
+                                <div class="me-3">
+                                    <i class="bi bi-person-circle me-2"></i>
+                                    {{ event_teacher.teacher }}
+                                </div>
+                                <small class="text-muted text-uppercase">Modérateur</small>
+                            </div>
+                            <div class="inline-block justify-content-center">
+                                <p class="text-xs text-muted mb-0 mt-2"><i class="bi bi-arrow-right-square me-2"></i>{{ event_teacher.starttime | date("H:i") }}</p>
+                                <p class="text-xs text-muted mb-0"><i class="bi bi-arrow-left-square me-2"></i>{{ event_teacher.endtime | date("H:i") }}</p>
+                            </div>
+                        </td>
+                        <td class="flex align-middle">
+                            <div class="inline-block text-center">
+                                {% if event_teacher.onlineTime is empty or event_teacher.onlineTime == 0 %}
+                                    <p class="mb-0">Absent</p>
+                                    <i class="bi bi-calendar-x"></i>
+                                {% else %}
+                                    {% set seconds_full = event_teacher.onlineTime / 1000 %}
+                                    {% set hours = seconds_full // 3600 %}
+                                    {% set minutes = (seconds_full % 3600) // 60 %}
+                                    {% set seconds = (seconds_full % 60) %}
+
+                                    {% if hours == 0 and minutes == 0 %}
+                                        Moins d'une minute
+                                    {% elseif hours == 0 %}
+                                        {{ minutes }} minute(s)
+                                    {% else %}
+                                        {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
+                                    {% endif %}
+                                    <div class="progress">
+                                        {% set step = 1 %}
+                                        {% set percentage = (((100/step) * seconds_full / meeting.duration) | round(0, 'common')) * step %}
+                                        <div class="progress-bar" role="progressbar" style="width: {{ percentage }}%">{{ percentage }} %</div>
+                                    </div>
+                                {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {% if event_teacher.talkTime is empty %}
+                                Non spécifié
+                            {% elseif event_teacher.talkTime == 0 %}
+                                <p class="mb-0">Pas de parole</p>
+                                <i class="bi bi-mic-mute-fill"></i>
+                            {% else %}
+                                {% set seconds_full = event_teacher.talkTime / 1000 %}
+                                {% set hours = seconds_full // 3600 %}
+                                {% set minutes = (seconds_full % 3600) // 60 %}
+                                {% set seconds = (seconds_full % 60) %}
+
+                                <i class="bi bi-mic me-1"></i>
+                                {% if hours == 0 and minutes == 0 %}
+                                    &lt; 1 minute
+                                {% elseif hours == 0 %}
+                                    {{ minutes }} minute(s)
+                                {% else %}
+                                    {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {% if event_teacher.webcamTime is empty %}
+                                Non spécifié
+                            {% elseif event_teacher.webcamTime == 0 %}
+                                <p class="mb-0">Pas de caméra</p>
+                                <i class="bi bi-camera-video-off-fill"></i>
+                            {% else %}
+                                {% set seconds_full = event_teacher.webcamTime / 1000 %}
+                                {% set hours = seconds_full // 3600 %}
+                                {% set minutes = (seconds_full % 3600) // 60 %}
+                                {% set seconds = (seconds_full % 60) %}
+
+                                <i class="bi bi-camera-video me-1"></i>
+                                {% if hours == 0 and minutes == 0 %}
+                                    &lt; 1 minute
+                                {% elseif hours == 0 %}
+                                    {{ minutes }} minute(s)
+                                {% else %}
+                                    {{ "%02dh %02dm %02ds"|format(hours, minutes, seconds) }}
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {# Si le nombre de message est null ou = 0, alors on affiche une icone #}
+                            {% if event_teacher.messageCount is empty or event_teacher.messageCount == 0 %}
+                                <p class="mb-0">Pas de message</p>
+                                <i class="bi bi-chat-right-dots-fill"></i>
+                            {% else %}
+                                <i class="bi bi-chat-right-dots me-1"></i>
+                                x {{ event_teacher.messageCount }}
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {# Si le nombre d'emoji est null ou = 0, alors on affiche une icone #}
+                            {% if event_teacher.emojis is empty or (event_teacher.emojis | length) < 1 or (((event_teacher.emojis | length) == 1) and event_teacher.emojis.raiseHand is defined) %}
+                                <p class="mb-0">Pas de réaction</p>
+                                <i class="bi bi-emoji-frown-fill"></i>
+                            {% else %}
+                                {% for name, emoji in event_teacher.emojis %}
+                                    {% if name != "raiseHand" %}
+                                        <p class="mb-0">
+                                            <i class="{{ emojis_visual_map[name] }} me-1"></i>
+                                            x {{ emoji.count }}
+                                        </p>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle">
+                            {# Si il n'y a pas d'émoji ou que raiseHand n'est pas défini, alors on affiche une icone #}
+                            {% if event_teacher.emojis is empty or not event_teacher.emojis.raiseHand is defined %}
+                                <p class="mb-0">Pas de main levée</p>
+                                <i class="bi bi-person-raised-hand"></i>
+                            {% else %}
+                                <i class="{{ emojis_visual_map.raiseHand }} me-1"></i>
+                                x {{ event_teacher.emojis.raiseHand.count }}
+                            {% endif %}
+                        </td>
+                        <td class="flex text-center align-middle" >
+                            <div id="activity-level-{{ event_teacher.teacher.id }}">
+                                <span class="badge rounded-full text-bg-secondary ms-1">Non calculé pour le professeur</span>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
 
                 {% for cours in all_courses %}
                     <tr>

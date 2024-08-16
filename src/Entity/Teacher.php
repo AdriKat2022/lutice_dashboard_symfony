@@ -255,8 +255,8 @@ class Teacher
      */
     private $publicpricing;
 
-//     #[ORM\ManyToMany(targetEntity: Event::class, mappedBy: 'comoderator')]
-//     private $coevent;
+    #[ORM\OneToMany(targetEntity: EventTeacher::class, mappedBy: 'teacher')]
+    private $coevent;
 
     #[ORM\Column(nullable: true)]
     private ?int $externalId = null; 
@@ -1217,28 +1217,25 @@ class Teacher
     }
 
     /**
-     * @return Collection|Event[]
+     * @return Collection|EventTeacher[]
      */
     function getCoevent(): Collection
     {
         return $this->coevent;
     }
 
-    function addCoevent(Event $coevent): self
+    function addCoevent(EventTeacher $coevent): self
     {
         if (!$this->coevent->contains($coevent)) {
             $this->coevent[] = $coevent;
-            $coevent->addComoderator($this);
         }
 
         return $this;
     }
 
-    function removeCoevent(Event $coevent): self
+    function removeCoevent(EventTeacher $coevent): self
     {
-        if ($this->coevent->removeElement($coevent)) {
-            $coevent->removeComoderator($this);
-        }
+        $this->coevent->removeElement($coevent);
 
         return $this;
     }
