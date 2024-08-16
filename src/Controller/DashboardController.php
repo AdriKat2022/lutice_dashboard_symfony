@@ -10,6 +10,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 use App\Entity\Meeting;
 use App\Entity\Cours;
+use App\Entity\EventTeacher;
 
 class DashboardController extends AbstractController
 {
@@ -47,6 +48,11 @@ class DashboardController extends AbstractController
                 ]);
         }
 
+        // Get all the EventTeachers entities associated with the meeting (secondary teachers but soon will hold all teachers)
+        $all_secondary_teachers = $entityManager
+            ->getRepository(EventTeacher::class)
+            ->findBy([ 'event' => $meeting->getEvent() ]);
+
         // Find all the associated courses for the meeting
         $all_courses = $entityManager
             ->getRepository(Cours::class)
@@ -66,15 +72,17 @@ class DashboardController extends AbstractController
         return $this->render("dashboard/show.html.twig",
             [
                 'meeting' => $meeting,
+                'all_secondary_teachers' => $all_secondary_teachers,
                 'all_courses' => $all_courses,
-                // 'json_meeting' => $json_teacher,
                 'json_courses' => $json_courses,
                 'emojis_visual_map' => [
                     'raiseHand' => 'bi bi-person-raised-hand',
                     'happy' => 'bi bi-emoji-smile',
-                    'smile' => 'bi bi-emoji-smile',
-                    'frown' => 'bi bi-emoji-frown',
                     'neutral' => 'bi bi-emoji-neutral',
+                    'frown' => 'bi bi-emoji-frown',
+                    'thumbsUp' => 'bi bi-hand-thumbs-up',
+                    'thumbsDown' => 'bi bi-hand-thumbs-down',
+                    'clap' => 'bi bi-hand-clap',
                 ],
             ]);
     }
