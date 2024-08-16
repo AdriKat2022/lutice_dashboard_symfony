@@ -571,7 +571,6 @@ class ImportDashboards extends Command
 			"The external ID '". $externalId ."' is not valid.",
 			$id . " hashed (". $id_hash .") doesn't match with '". $data[1] ."'",
 	]);
-		exit(1);
         
         return null;
     }
