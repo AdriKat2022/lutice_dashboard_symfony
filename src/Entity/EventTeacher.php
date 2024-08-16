@@ -39,7 +39,11 @@ class EventTeacher
     private ?array $emojis = null;
 
 
-    // Make all the getters and setters for the properties
+    // To string method to return the event and teacher
+    public function __toString(): string
+    {
+        return $this->event->getMeetingName() . ' - ' . $this->teacher->getFullName();
+    }
 
     public function getEvent(): Event
     {
