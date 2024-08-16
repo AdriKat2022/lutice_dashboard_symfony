@@ -557,13 +557,21 @@ class ImportDashboards extends Command
 	// 	return array();
 	// }
 
-	private function getInternalBBBId(string $externalId) : int
+	private function getInternalBBBId(string $externalId) : ?int
 	{
         $data = explode('_', $externalId);
         $id = base64_decode($data[0]);
-        if($data[1] === hash('adler32', $id)) {
+		$id_hash = hash('adler32', $id);
+
+        if($data[1] === $id_hash) {
             return $id;
         }
+
+		$this->io->caution([
+			"The external ID '". $externalId ."' is not valid.",
+			$id . " hashed (". $id_hash .") doesn't match with '". $data[1] ."'",
+	]);
+		exit(1);
         
         return null;
     }
