@@ -325,6 +325,11 @@
                 {% endfor %}
             </tbody>
         </table>
+        <a href="{{ path('app_dashboard_download_csv', {meeting_id: meeting.meetingId}) }}">
+            <div class="btn btn-primary" >
+                Télécharger (CSV)
+            </div>
+        </a>
     </div>
 {% endblock %}
 

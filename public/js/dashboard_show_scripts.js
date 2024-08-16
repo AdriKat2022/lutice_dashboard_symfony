@@ -133,3 +133,22 @@ function computeUserActivities() {
         }
     });
 }
+
+// Get the button that downloads the CSV file
+// const downloadButton = document.getElementById('download-csv');
+// if (downloadButton) {
+//     downloadButton.addEventListener('click', downloadCsv);
+// }
+
+// function downloadCsv() {
+//     const csv = 'data:text/csv;charset=utf-8,' + 'id,onlineTime,talkTime,webcamTime,messageCount,emojis,raiseHand\n';
+//     // const teacher_rows = event.teachers...
+//     const teacher_row = ``;
+//     const student_rows = courses_json_data.map(user => user.id + ',' + user.onlineTime + ',' + user.talkTime + ',' + user.webcamTime + ',' + user.messageCount + ',' + user.emojis + ',' + user.raiseHand).join('\n');
+//     const encodedUri = encodeURI(csv);
+//     const link = document.createElement('a');
+//     link.setAttribute('href', encodedUri);
+//     link.setAttribute('download', 'user_activities.csv');
+//     document.body.appendChild(link);
+//     link.click();
+// }
