@@ -37,4 +37,104 @@ class EventTeacher
 
     #[ORM\Column(nullable: true)]
     private ?array $emojis = null;
+
+
+    // Make all the getters and setters for the properties
+
+    public function getEvent(): Event
+    {
+        return $this->event;
+    }
+
+    public function setEvent(Event $event): self
+    {
+        $this->event = $event;
+
+        return $this;
+    }
+
+    public function getTeacher(): Teacher
+    {
+        return $this->teacher;
+    }
+
+    public function setTeacher(Teacher $teacher): self
+    {
+        $this->teacher = $teacher;
+
+        return $this;
+    }
+
+    public function getOnlineTime(): ?int
+    {
+        return $this->onlineTime;
+    }
+
+    public function setOnlineTime(?int $onlineTime): self
+    {
+        $this->onlineTime = $onlineTime;
+
+        return $this;
+    }
+
+    public function getTalkTime(): ?int
+    {
+        return $this->talkTime;
+    }
+
+    public function setTalkTime(?int $talkTime): self
+    {
+        $this->talkTime = $talkTime;
+
+        return $this;
+    }
+
+    public function getWebcamTime(): ?int
+    {
+        return $this->webcamTime;
+    }
+
+    public function setWebcamTime(?int $webcamTime): self
+    {
+        $this->webcamTime = $webcamTime;
+
+        return $this;
+    }
+
+    public function getMessageCount(): ?int
+    {
+        return $this->messageCount;
+    }
+
+    public function setMessageCount(?int $messageCount): self
+    {
+        $this->messageCount = $messageCount;
+
+        return $this;
+    }
+
+    public function getConnectionCount(): ?int
+    {
+        return $this->connectionCount;
+    }
+
+    public function setConnectionCount(?int $connectionCount): self
+    {
+        $this->connectionCount = $connectionCount;
+
+        return $this;
+    }
+
+    public function getEmojis(): ?array
+    {
+        return $this->emojis;
+    }
+
+    public function setEmojis(?array $emojis): self
+    {
+        $this->emojis = $emojis;
+
+        return $this;
+    }
+
 }
