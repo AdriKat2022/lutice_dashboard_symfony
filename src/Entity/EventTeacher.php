@@ -53,6 +53,7 @@ class EventTeacher
     public function setEvent(Event $event): self
     {
         $this->event = $event;
+        $event->addComoderator($this);
 
         return $this;
     }
@@ -65,6 +66,7 @@ class EventTeacher
     public function setTeacher(Teacher $teacher): self
     {
         $this->teacher = $teacher;
+        $teacher->addCoevent($this);
 
         return $this;
     }
